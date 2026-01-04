@@ -65,12 +65,11 @@
       }
     }
 
-    function copyCode(projectId) {
-      const code = `<script src="https://www.example.com/tag/${projectId}/tracker.js" charset="utf-8"></script>`;
+    function copyCode(projectId, buttonElement) {
+      const code = `<script src="https://www.example.com/tag/${projectId}/tracker.js" charset="utf-8"><\/script>`;
       navigator.clipboard.writeText(code);
       
-      const btn = event.target.closest('.copy-btn');
-      const span = btn.querySelector('span');
+      const span = buttonElement.querySelector('span');
       span.textContent = '✓ コピーしました';
       setTimeout(() => {
         span.textContent = '📋 コピーする';
@@ -101,7 +100,7 @@
     document.getElementById('projects-list').addEventListener('click', (e) => {
       const btn = e.target.closest('.copy-btn');
       if (btn) {
-        copyCode(btn.dataset.projectId);
+        copyCode(btn.dataset.projectId, btn);
       }
     });
 

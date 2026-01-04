@@ -27,9 +27,8 @@ app.get('/api/analytics/:projectId', async (req, res) => {
 		const project = await Project.findById(req.params.projectId);
 		if (!project) return res.status(404).send('Project not found');
 
-		const { start, end } = req.query;
+		const { start, end, device, browser, os, language } = req.query;
 		
-		// 日付の範囲を日本時間の00:00:00から23:59:59まで厳密に指定
 		const startDate = new Date(start);
 		startDate.setHours(0, 0, 0, 0);
 		const endDate = new Date(end);
@@ -40,13 +39,18 @@ app.get('/api/analytics/:projectId', async (req, res) => {
 				timestamp: { $gte: startDate, $lte: endDate }
 		};
 
+		// フィルタを追加
+		if (device) query.device = { $in: device.split(',') };
+		if (browser) query.browser = { $in: browser.split(',') };
+		if (os) query.os = { $in: os.split(',') };
+		if (language) query.language = { $in: language.split(',') };
+
 		const [stats, pages, filters] = await Promise.all([
 				Log.aggregate([
 						{ $match: query },
 						{ 
 								$group: { 
 										_id: null, 
-										// 重要：実データの 'page_view' だけを合計するように修正
 										pv: { $sum: { $cond: [{ $eq: ["$event", "page_view"] }, 1, 0] } },
 										uu: { $addToSet: "$userId" } 
 								} 
@@ -115,6 +119,33 @@ app.post('/track', async (req, res) => {
 		});
 		await log.save();
 		res.json({ status: 'ok' });
+});
+
+// tracker-sdk.js を配信するためのエンドポイント
+app.get('/load-tracker.js', async (req, res) => {
+    // リクエスト元の Origin (例: https://production-null.work) を取得
+    const origin = req.get('origin') || req.get('referer');
+    
+    if (!origin) {
+        return res.status(403).send('Direct access not allowed');
+    }
+
+    try {
+        // DBに登録されているURLと前方一致（または完全一致）するかチェック
+        // ※DB内のURL末尾の/の有無に柔軟に対応するため正規表現等で調整
+        const projects = await Project.find();
+        const isAuthorized = projects.some(p => origin.startsWith(p.url.replace(/\/$/, "")));
+
+        if (isAuthorized) {
+            // 許可されている場合、publicフォルダ内のJSファイルを返す
+            res.sendFile(__dirname + '/public/tracker-sdk.js');
+        } else {
+            console.warn(`Unauthorized access attempt from: ${origin}`);
+            res.status(403).send('Domain not authorized');
+        }
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
 });
 
 app.listen(3000, () => console.log('Server running on port 3000'));

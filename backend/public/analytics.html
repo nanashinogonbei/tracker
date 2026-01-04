@@ -4,75 +4,104 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>アクセス解析 - Webトラッカー</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; }
+    .container { display: flex; min-height: 100vh; }
+    .sidebar { width: 256px; background: white; border-right: 1px solid #e5e7eb; padding: 24px; }
+    .sidebar a { display: block; width: 100%; padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; text-decoration: none; color: #374151; font-size: 14px; margin-bottom: 8px; }
+    .sidebar a:hover { background: #f9fafb; }
+    .sidebar-menu { margin-top: 16px; }
+    .sidebar-item { padding: 8px 16px; font-size: 14px; color: #6b7280; }
+    .main { flex: 1; padding: 32px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .header h1 { font-size: 24px; font-weight: bold; }
+    .header p { font-size: 14px; color: #6b7280; }
+    .header a { color: #3b82f6; font-size: 14px; text-decoration: none; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+    .date-range { display: flex; align-items: center; gap: 16px; }
+    .date-range input { padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 4px; }
+    .filters { display: flex; gap: 12px; margin-top: 12px; }
+    .filter { position: relative; }
+    .filter-btn { padding: 8px 24px; border: 1px solid #d1d5db; border-radius: 9999px; background: white; cursor: pointer; font-size: 14px; }
+    .filter-btn.active { background: #22c55e; color: white; border-color: #22c55e; }
+    .filter-dropdown { display: none; position: absolute; top: 100%; left: 0; margin-top: 8px; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 16px; min-width: 200px; z-index: 10; }
+    .filter-dropdown.show { display: block; }
+    .filter-option { display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; }
+    .filter-option:hover { background: #f9fafb; }
+    .filter-option input { cursor: pointer; }
+    .filter-close { width: 100%; margin-top: 8px; padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+    .stat-card { background: #f3f4f6; border-radius: 8px; padding: 24px; }
+    .stat-card.white { background: white; border: 1px solid #e5e7eb; }
+    .stat-label { font-size: 14px; color: #6b7280; margin-bottom: 8px; }
+    .stat-value { font-size: 36px; font-weight: bold; }
+    .popular-page { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
+    .popular-page span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+    .popular-page span:last-child { font-weight: 500; }
+    .events-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; }
+    .event-row { display: flex; align-items: start; gap: 24px; margin-bottom: 16px; }
+    .event-row select { padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 4px; min-width: 200px; }
+    .event-row button { padding: 8px 16px; color: #ef4444; background: none; border: none; cursor: pointer; }
+    .event-row button:hover { color: #dc2626; }
+    .event-count { font-size: 48px; font-weight: bold; flex: 1; }
+    .add-btn { width: 48px; height: 48px; background: #3b82f6; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 24px; margin-top: 16px; }
+    .add-btn:hover { background: #2563eb; }
+  </style>
 </head>
-<body class="bg-gray-50">
-  <div class="min-h-screen flex">
-    <aside class="w-64 bg-white min-h-screen border-r">
-      <div class="p-6">
-        <a href="admin.html" class="block w-full px-4 py-2 text-sm border rounded mb-2 text-center hover:bg-gray-50">
-          プロジェクト一覧
-        </a>
-        <div class="mt-4 space-y-1">
-          <div class="px-4 py-2 text-sm">プロジェクト管理</div>
-          <div class="px-4 py-2 text-sm text-gray-500">アカウント管理</div>
-        </div>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <a href="admin.html">プロジェクト一覧</a>
+      <div class="sidebar-menu">
+        <div class="sidebar-item">プロジェクト管理</div>
+        <div class="sidebar-item">アカウント管理</div>
       </div>
     </aside>
 
-    <main class="flex-1 p-8">
-      <div class="flex items-center justify-between mb-8">
+    <main class="main">
+      <div class="header">
         <div>
-          <h1 class="text-2xl font-bold" id="project-name">読み込み中...</h1>
-          <p class="text-sm text-gray-600" id="project-url"></p>
+          <h1 id="project-name">読み込み中...</h1>
+          <p id="project-url"></p>
         </div>
-        <a href="admin.html" class="text-blue-500 text-sm hover:underline">戻る</a>
+        <a href="admin.html">戻る</a>
       </div>
 
-      <div class="mb-6">
-        <div class="text-sm font-medium mb-2">期間</div>
-        <div class="flex items-center gap-4">
-          <input type="date" id="start-date" class="px-4 py-2 border rounded">
+      <div class="section">
+        <div class="section-title">期間</div>
+        <div class="date-range">
+          <input type="date" id="start-date">
           <span>〜</span>
-          <input type="date" id="end-date" class="px-4 py-2 border rounded">
+          <input type="date" id="end-date">
         </div>
       </div>
 
-      <div class="mb-8">
-        <div class="text-sm font-medium mb-3">フィルター</div>
-        <div class="flex gap-3" id="filters"></div>
+      <div class="section">
+        <div class="section-title">フィルター</div>
+        <div class="filters" id="filters"></div>
       </div>
 
-      <div class="grid grid-cols-3 gap-6 mb-8">
-        <div class="bg-gray-100 rounded-lg p-6">
-          <div class="text-sm text-gray-600 mb-2">ユニークユーザー</div>
-          <div class="text-4xl font-bold" id="unique-users">-</div>
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">ユニークユーザー</div>
+          <div class="stat-value" id="unique-users">-</div>
         </div>
-        <div class="bg-gray-100 rounded-lg p-6">
-          <div class="text-sm text-gray-600 mb-2">ページビュー</div>
-          <div class="text-4xl font-bold" id="page-views">-</div>
+        <div class="stat-card">
+          <div class="stat-label">ページビュー</div>
+          <div class="stat-value" id="page-views">-</div>
         </div>
-        <div class="bg-white rounded-lg p-6 border">
-          <div class="text-sm text-gray-600 mb-3">人気ページ</div>
-          <div id="popular-pages" class="space-y-2"></div>
+        <div class="stat-card white">
+          <div class="stat-label">人気ページ</div>
+          <div id="popular-pages"></div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg p-6 border">
-        <div class="text-sm font-medium mb-4">イベント</div>
-        <div class="flex items-start gap-6">
-          <select id="event-select" class="px-4 py-2 border rounded" style="min-width: 200px">
-            <option value="">イベントを選択 ▼</option>
-          </select>
-          <select class="px-4 py-2 border rounded">
-            <option>event select ▼</option>
-          </select>
-          <button class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600">+</button>
-        </div>
-        
-        <div class="mt-6">
-          <div class="text-5xl font-bold" id="event-count"></div>
-        </div>
+      <div class="events-card">
+        <div class="section-title">イベント</div>
+        <div id="event-rows"></div>
+        <button class="add-btn" id="add-event-btn">+</button>
       </div>
     </main>
   </div>
@@ -84,6 +113,7 @@
     let project = null;
     let analyticsData = null;
     let selectedFilters = { device: [], browser: [], os: [], language: [] };
+    let eventRows = [];
 
     async function loadProject() {
       const res = await fetch(`${API_URL}/projects`);
@@ -94,7 +124,7 @@
       document.getElementById('project-url').textContent = project.url;
     }
 
-    async function loadAnalytics() {
+    async function loadAnalytics(keepDropdownOpen = false) {
       const startDate = document.getElementById('start-date').value;
       const endDate = document.getElementById('end-date').value;
       
@@ -112,61 +142,112 @@
       document.getElementById('popular-pages').innerHTML = analyticsData.popularPages
         .slice(0, 3)
         .map((page, idx) => `
-          <div class="flex justify-between text-sm">
-            <span class="truncate flex-1 mr-2">${idx + 1}. ${page.url}</span>
-            <span class="font-medium">${page.count}view</span>
+          <div class="popular-page">
+            <span>${idx + 1}. ${page.url}</span>
+            <span>${page.count}view</span>
           </div>
         `).join('');
 
-      const eventSelect = document.getElementById('event-select');
-      eventSelect.innerHTML = '<option value="">イベントを選択 ▼</option>' + 
-        analyticsData.availableEvents.map(e => `<option value="${e}">${e}</option>`).join('');
-
-      renderFilters();
+      if (keepDropdownOpen) {
+        updateFilterButtons();
+      } else {
+        renderFilters();
+      }
+      
+      eventRows.forEach((_, idx) => loadEventCount(idx));
+    }
+    
+    function updateFilterButtons() {
+      // ボタンの表示だけを更新（ドロップダウンは再描画しない）
+      document.querySelectorAll('.filter').forEach(filterDiv => {
+        const btn = filterDiv.querySelector('.filter-btn');
+        const dropdown = filterDiv.querySelector('.filter-dropdown');
+        const key = dropdown.id.replace('filter-', '');
+        const hasSelected = selectedFilters[key].length > 0;
+        
+        btn.className = 'filter-btn' + (hasSelected ? ' active' : '');
+        const labels = { device: 'デバイス', browser: 'ブラウザ', os: 'OS', language: '言語' };
+        btn.textContent = labels[key] + (hasSelected ? ' ✓' : '');
+      });
     }
 
     function renderFilters() {
-      const filters = document.getElementById('filters');
-      filters.innerHTML = `
-        ${renderFilter('デバイス', 'device', analyticsData.filters.devices)}
-        ${renderFilter('ブラウザ', 'browser', analyticsData.filters.browsers)}
-        ${renderFilter('OS', 'os', analyticsData.filters.oss)}
-        ${renderFilter('言語', 'language', analyticsData.filters.languages)}
-      `;
-    }
-
-    function renderFilter(label, key, options) {
-      const hasSelected = selectedFilters[key].length > 0;
-      return `
-        <div class="relative">
-          <button onclick="toggleFilter('${key}')" 
-            class="px-6 py-2 rounded-full border ${hasSelected ? 'bg-green-500 text-white' : 'bg-white'}">
-            ${label} ${hasSelected ? '✓' : ''}
-          </button>
-          <div id="filter-${key}" class="hidden absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg p-4 min-w-[200px] z-10">
-            ${options.map(opt => `
-              <label class="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50">
-                <input type="checkbox" value="${opt}" 
-                  ${selectedFilters[key].includes(opt) ? 'checked' : ''}
-                  onchange="updateFilter('${key}', '${opt}', this.checked)">
-                <span class="text-sm">${opt}</span>
-              </label>
-            `).join('')}
-            <button onclick="closeFilter('${key}')" class="w-full mt-2 px-4 py-2 bg-gray-200 text-sm rounded">閉じる</button>
-          </div>
-        </div>
-      `;
+      const filtersContainer = document.getElementById('filters');
+      
+      // 既存のドロップダウンの表示状態を保存
+      const openDropdowns = [];
+      document.querySelectorAll('.filter-dropdown.show').forEach(dd => {
+        openDropdowns.push(dd.id.replace('filter-', ''));
+      });
+      
+      filtersContainer.innerHTML = '';
+      
+      [
+        { label: 'デバイス', key: 'device', options: analyticsData.filters.devices },
+        { label: 'ブラウザ', key: 'browser', options: analyticsData.filters.browsers },
+        { label: 'OS', key: 'os', options: analyticsData.filters.oss },
+        { label: '言語', key: 'language', options: analyticsData.filters.languages }
+      ].forEach(filter => {
+        const filterDiv = document.createElement('div');
+        filterDiv.className = 'filter';
+        
+        const hasSelected = selectedFilters[filter.key].length > 0;
+        
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn' + (hasSelected ? ' active' : '');
+        btn.textContent = filter.label + (hasSelected ? ' ✓' : '');
+        btn.onclick = () => toggleFilter(filter.key);
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'filter-dropdown';
+        dropdown.id = `filter-${filter.key}`;
+        
+        // 以前開いていた場合は再度開く
+        if (openDropdowns.includes(filter.key)) {
+          dropdown.classList.add('show');
+        }
+        
+        filter.options.forEach(opt => {
+          const label = document.createElement('label');
+          label.className = 'filter-option';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = opt;
+          checkbox.checked = selectedFilters[filter.key].includes(opt);
+          checkbox.onchange = (e) => {
+            e.stopPropagation();
+            updateFilter(filter.key, opt, checkbox.checked);
+          };
+          
+          const span = document.createElement('span');
+          span.textContent = opt;
+          span.style.fontSize = '14px';
+          
+          label.appendChild(checkbox);
+          label.appendChild(span);
+          dropdown.appendChild(label);
+        });
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'filter-close';
+        closeBtn.textContent = '閉じる';
+        closeBtn.onclick = () => closeFilter(filter.key);
+        dropdown.appendChild(closeBtn);
+        
+        filterDiv.appendChild(btn);
+        filterDiv.appendChild(dropdown);
+        filtersContainer.appendChild(filterDiv);
+      });
     }
 
     function toggleFilter(key) {
-      document.querySelectorAll('[id^="filter-"]').forEach(el => {
-        if (el.id !== `filter-${key}`) el.classList.add('hidden');
-      });
-      document.getElementById(`filter-${key}`).classList.toggle('hidden');
+      const dropdown = document.getElementById(`filter-${key}`);
+      dropdown.classList.toggle('show');
     }
 
     function closeFilter(key) {
-      document.getElementById(`filter-${key}`).classList.add('hidden');
+      document.getElementById(`filter-${key}`).classList.remove('show');
     }
 
     function updateFilter(key, value, checked) {
@@ -175,13 +256,71 @@
       } else {
         selectedFilters[key] = selectedFilters[key].filter(v => v !== value);
       }
-      loadAnalytics();
+      loadAnalytics(true);
     }
 
-    async function loadEventCount() {
-      const event = document.getElementById('event-select').value;
+    function addEventRow() {
+      eventRows.push({ event: '', count: null });
+      renderEventRows();
+    }
+
+    function removeEventRow(idx) {
+      eventRows.splice(idx, 1);
+      renderEventRows();
+    }
+
+    function renderEventRows() {
+      const container = document.getElementById('event-rows');
+      container.innerHTML = '';
+      
+      eventRows.forEach((row, idx) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'event-row';
+        
+        const select = document.createElement('select');
+        select.id = `event-select-${idx}`;
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'イベントを選択 ▼';
+        select.appendChild(defaultOption);
+        
+        if (analyticsData) {
+          analyticsData.availableEvents.forEach(e => {
+            const option = document.createElement('option');
+            option.value = e;
+            option.textContent = e;
+            option.selected = row.event === e;
+            select.appendChild(option);
+          });
+        }
+        
+        select.onchange = () => loadEventCount(idx);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '削除';
+        deleteBtn.onclick = () => removeEventRow(idx);
+        
+        const countDiv = document.createElement('div');
+        countDiv.className = 'event-count';
+        countDiv.id = `event-count-${idx}`;
+        countDiv.textContent = row.count !== null ? row.count : '';
+        
+        rowDiv.appendChild(select);
+        rowDiv.appendChild(deleteBtn);
+        rowDiv.appendChild(countDiv);
+        container.appendChild(rowDiv);
+      });
+    }
+
+    async function loadEventCount(rowId) {
+      const selectEl = document.getElementById(`event-select-${rowId}`);
+      const event = selectEl.value;
+      eventRows[rowId].event = event;
+      
       if (!event) {
-        document.getElementById('event-count').textContent = '';
+        eventRows[rowId].count = null;
+        document.getElementById(`event-count-${rowId}`).textContent = '';
         return;
       }
 
@@ -191,7 +330,8 @@
 
       const res = await fetch(`${API_URL}/analytics/${projectId}/event-count?${params}`);
       const data = await res.json();
-      document.getElementById('event-count').textContent = data.count;
+      eventRows[rowId].count = data.count;
+      document.getElementById(`event-count-${rowId}`).textContent = data.count;
     }
 
     function initDates() {
@@ -208,7 +348,7 @@
 
     document.getElementById('start-date').addEventListener('change', loadAnalytics);
     document.getElementById('end-date').addEventListener('change', loadAnalytics);
-    document.getElementById('event-select').addEventListener('change', loadEventCount);
+    document.getElementById('add-event-btn').addEventListener('click', addEventRow);
   </script>
 </body>
 </html>
