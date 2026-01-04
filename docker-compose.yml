@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    # ports:
+    #   - "3000:3000"
+    depends_on:
+      - mongodb
+    volumes:
+      # JSONファイルの保存先をホストと共有
+      - ./backend/exports:/app/exports
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Tokyo
+    networks:
+      - tracker_network
+      - default
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - TZ=Asia/Tokyo
+    networks:
+      - default
+
+volumes:
+  mongo-data:
+
+networks:
+  tracker_network:
+    external: true
