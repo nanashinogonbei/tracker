@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アクセス解析 - Webトラッカー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div class="min-h-screen flex">
+    <aside class="w-64 bg-white min-h-screen border-r">
+      <div class="p-6">
+        <a href="index.html" class="block w-full px-4 py-2 text-sm border rounded mb-2 text-center hover:bg-gray-50">
+          プロジェクト一覧
+        </a>
+        <div class="mt-4 space-y-1">
+          <div class="px-4 py-2 text-sm">プロジェクト管理</div>
+          <div class="px-4 py-2 text-sm text-gray-500">アカウント管理</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 p-8">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold" id="project-name">読み込み中...</h1>
+          <p class="text-sm text-gray-600" id="project-url"></p>
+        </div>
+        <a href="index.html" class="text-blue-500 text-sm hover:underline">戻る</a>
+      </div>
+
+      <div class="mb-6">
+        <div class="text-sm font-medium mb-2">期間</div>
+        <div class="flex items-center gap-4">
+          <input type="date" id="start-date" class="px-4 py-2 border rounded">
+          <span>〜</span>
+          <input type="date" id="end-date" class="px-4 py-2 border rounded">
+        </div>
+      </div>
+
+      <div class="mb-8">
+        <div class="text-sm font-medium mb-3">フィルター</div>
+        <div class="flex gap-3" id="filters"></div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-6 mb-8">
+        <div class="bg-gray-100 rounded-lg p-6">
+          <div class="text-sm text-gray-600 mb-2">ユニークユーザー</div>
+          <div class="text-4xl font-bold" id="unique-users">-</div>
+        </div>
+        <div class="bg-gray-100 rounded-lg p-6">
+          <div class="text-sm text-gray-600 mb-2">ページビュー</div>
+          <div class="text-4xl font-bold" id="page-views">-</div>
+        </div>
+        <div class="bg-white rounded-lg p-6 border">
+          <div class="text-sm text-gray-600 mb-3">人気ページ</div>
+          <div id="popular-pages" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg p-6 border">
+        <div class="text-sm font-medium mb-4">イベント</div>
+        <div class="flex items-start gap-6">
+          <select id="event-select" class="px-4 py-2 border rounded" style="min-width: 200px">
+            <option value="">イベントを選択 ▼</option>
+          </select>
+          <select class="px-4 py-2 border rounded">
+            <option>event select ▼</option>
+          </select>
+          <button class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600">+</button>
+        </div>
+        
+        <div class="mt-6">
+          <div class="text-5xl font-bold" id="event-count"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API_URL = 'https://gb.production-null.work/api';
+    const projectId = new URLSearchParams(location.search).get('id');
+    
+    let project = null;
+    let analyticsData = null;
+    let selectedFilters = { device: [], browser: [], os: [], language: [] };
+
+    async function loadProject() {
+      const res = await fetch(`${API_URL}/projects`);
+      const projects = await res.json();
+      project = projects.find(p => p._id === projectId);
+      
+      document.getElementById('project-name').textContent = project.name;
+      document.getElementById('project-url').textContent = project.url;
+    }
+
+    async function loadAnalytics() {
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      
+      const params = new URLSearchParams({ start: startDate, end: endDate });
+      Object.entries(selectedFilters).forEach(([key, values]) => {
+        if (values.length > 0) params.set(key, values.join(','));
+      });
+
+      const res = await fetch(`${API_URL}/analytics/${projectId}?${params}`);
+      analyticsData = await res.json();
+      
+      document.getElementById('unique-users').textContent = analyticsData.uniqueUsers;
+      document.getElementById('page-views').textContent = analyticsData.pageViews.toLocaleString();
+      
+      document.getElementById('popular-pages').innerHTML = analyticsData.popularPages
+        .slice(0, 3)
+        .map((page, idx) => `
+          <div class="flex justify-between text-sm">
+            <span class="truncate flex-1 mr-2">${idx + 1}. ${page.url}</span>
+            <span class="font-medium">${page.count}view</span>
+          </div>
+        `).join('');
+
+      const eventSelect = document.getElementById('event-select');
+      eventSelect.innerHTML = '<option value="">イベントを選択 ▼</option>' + 
+        analyticsData.availableEvents.map(e => `<option value="${e}">${e}</option>`).join('');
+
+      renderFilters();
+    }
+
+    function renderFilters() {
+      const filters = document.getElementById('filters');
+      filters.innerHTML = `
+        ${renderFilter('デバイス', 'device', analyticsData.filters.devices)}
+        ${renderFilter('ブラウザ', 'browser', analyticsData.filters.browsers)}
+        ${renderFilter('OS', 'os', analyticsData.filters.oss)}
+        ${renderFilter('言語', 'language', analyticsData.filters.languages)}
+      `;
+    }
+
+    function renderFilter(label, key, options) {
+      const hasSelected = selectedFilters[key].length > 0;
+      return `
+        <div class="relative">
+          <button onclick="toggleFilter('${key}')" 
+            class="px-6 py-2 rounded-full border ${hasSelected ? 'bg-green-500 text-white' : 'bg-white'}">
+            ${label} ${hasSelected ? '✓' : ''}
+          </button>
+          <div id="filter-${key}" class="hidden absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg p-4 min-w-[200px] z-10">
+            ${options.map(opt => `
+              <label class="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50">
+                <input type="checkbox" value="${opt}" 
+                  ${selectedFilters[key].includes(opt) ? 'checked' : ''}
+                  onchange="updateFilter('${key}', '${opt}', this.checked)">
+                <span class="text-sm">${opt}</span>
+              </label>
+            `).join('')}
+            <button onclick="closeFilter('${key}')" class="w-full mt-2 px-4 py-2 bg-gray-200 text-sm rounded">閉じる</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleFilter(key) {
+      document.querySelectorAll('[id^="filter-"]').forEach(el => {
+        if (el.id !== `filter-${key}`) el.classList.add('hidden');
+      });
+      document.getElementById(`filter-${key}`).classList.toggle('hidden');
+    }
+
+    function closeFilter(key) {
+      document.getElementById(`filter-${key}`).classList.add('hidden');
+    }
+
+    function updateFilter(key, value, checked) {
+      if (checked) {
+        selectedFilters[key].push(value);
+      } else {
+        selectedFilters[key] = selectedFilters[key].filter(v => v !== value);
+      }
+      loadAnalytics();
+    }
+
+    async function loadEventCount() {
+      const event = document.getElementById('event-select').value;
+      if (!event) {
+        document.getElementById('event-count').textContent = '';
+        return;
+      }
+
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const params = new URLSearchParams({ start: startDate, end: endDate, event });
+
+      const res = await fetch(`${API_URL}/analytics/${projectId}/event-count?${params}`);
+      const data = await res.json();
+      document.getElementById('event-count').textContent = data.count;
+    }
+
+    function initDates() {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      
+      document.getElementById('start-date').value = start.toISOString().split('T')[0];
+      document.getElementById('end-date').value = end.toISOString().split('T')[0];
+    }
+
+    initDates();
+    loadProject().then(loadAnalytics);
+
+    document.getElementById('start-date').addEventListener('change', loadAnalytics);
+    document.getElementById('end-date').addEventListener('change', loadAnalytics);
+    document.getElementById('event-select').addEventListener('change', loadEventCount);
+  </script>
+</body>
+</html>
