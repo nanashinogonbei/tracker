@@ -1,110 +1,112 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>プロジェクト一覧 - Webトラッカー</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>プロジェクト一覧 - Webトラッカー</title>
+	<script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-  <div class="min-h-screen flex">
-    <aside class="w-64 bg-white min-h-screen border-r">
-      <div class="p-6">
-        <button class="w-full px-4 py-2 text-sm border rounded mb-2">プロジェクト一覧</button>
-        <div class="mt-4 space-y-1">
-          <div class="px-4 py-2 text-sm">プロジェクト管理</div>
-          <div class="px-4 py-2 text-sm text-gray-500">アカウント管理</div>
-        </div>
-      </div>
-    </aside>
+	<div class="min-h-screen flex">
+		<aside class="w-64 bg-white min-h-screen border-r">
+			<div class="p-6">
+				<button class="w-full px-4 py-2 text-sm border rounded mb-2">プロジェクト一覧</button>
+				<div class="mt-4 space-y-1">
+					<div class="px-4 py-2 text-sm">プロジェクト管理</div>
+					<div class="px-4 py-2 text-sm text-gray-500">アカウント管理</div>
+				</div>
+			</div>
+		</aside>
 
-    <main class="flex-1 p-8">
-      <h1 class="text-2xl font-bold mb-8">プロジェクト一覧</h1>
-      <div id="projects-list" class="space-y-4 mb-8"></div>
-      <button id="create-btn" class="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600">
-        新規プロジェクトを作成
-      </button>
-    </main>
-  </div>
+		<main class="flex-1 p-8">
+			<h1 class="text-2xl font-bold mb-8">プロジェクト一覧</h1>
+			<div id="projects-list" class="space-y-4 mb-8"></div>
+			<button id="create-btn" class="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600">
+				新規プロジェクトを作成
+			</button>
+		</main>
+	</div>
 
-  <script>
-    const API_URL = '/api';
+	<script>
+		const API_URL = '/api';
 
-    async function loadProjects() {
-      try {
-        const res = await fetch(`${API_URL}/projects`);
-        const projects = await res.json();
-        
-        const list = document.getElementById('projects-list');
-        list.innerHTML = projects.map(project => `
-          <div class="bg-white rounded-lg shadow p-6 flex items-start gap-6">
-            <div class="w-32 h-24 bg-gray-300 rounded flex-shrink-0"></div>
-            
-            <div class="flex-1">
-              <h3 class="font-bold text-lg mb-1">${project.name}</h3>
-              <p class="text-sm text-gray-600 mb-3">${project.url}</p>
-              <div class="flex gap-4">
-                <a href="analytics.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">ABテスト</a>
-                <a href="analytics.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">アクセス解析</a>
-              </div>
-            </div>
+		async function loadProjects() {
+			try {
+				const res = await fetch(`${API_URL}/projects`);
+				const projects = await res.json();
+				
+				const list = document.getElementById('projects-list');
+				list.innerHTML = projects.map(project => `
+					<div class="bg-white rounded-lg shadow p-6 flex items-start gap-6">
+						<div class="w-32 h-24 bg-gray-300 rounded flex-shrink-0"></div>
+						
+						<div class="flex-1">
+							<h3 class="font-bold text-lg mb-1">${project.name}</h3>
+							<p class="text-sm text-gray-600 mb-3">${project.url}</p>
+							<div class="flex gap-4">
+								<a href="analytics.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">ABテスト</a>
+								<a href="analytics.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">アクセス解析</a>
+							</div>
+						</div>
 
-            <div class="flex-shrink-0">
-              <div class="text-sm font-medium mb-2">SDK</div>
-              <div class="bg-gray-50 p-3 rounded text-xs font-mono mb-2 max-w-md">
-                &lt;script src="https://www.example.com/tag/${project._id.slice(0, 4)}/***js" charset="utf-8"&gt;&lt;/script&gt;
-              </div>
-              <button data-project-id="${project._id}" class="copy-btn w-full bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600">
-                <span>📋 コピーする</span>
-              </button>
-            </div>
-          </div>
-        `).join('');
-      } catch (err) {
-        console.error('Failed to load projects:', err);
-      }
-    }
+						<div class="flex-shrink-0">
+							<div class="text-sm font-medium mb-2">SDK</div>
+								<div class="bg-gray-50 p-3 rounded text-xs font-mono mb-2 max-w-md">
+									&lt;script src="${window.location.origin}/tag/${project._id}/tracker.js" charset="utf-8"&gt;&lt;/script&gt;
+								</div>
+							<button data-project-id="${project._id}" class="copy-btn w-full bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600">
+								<span>📋 コピーする</span>
+							</button>
+						</div>
+					</div>
+				`).join('');
+			} catch (err) {
+				console.error('Failed to load projects:', err);
+			}
+		}
 
-    function copyCode(projectId, buttonElement) {
-      const code = `<script src="https://www.example.com/tag/${projectId}/tracker.js" charset="utf-8"><\/script>`;
-      navigator.clipboard.writeText(code);
-      
-      const span = buttonElement.querySelector('span');
-      span.textContent = '✓ コピーしました';
-      setTimeout(() => {
-        span.textContent = '📋 コピーする';
-      }, 2000);
-    }
+		// copyCode関数を修正
+		function copyCode(projectId, buttonElement) {
+			const serverUrl = window.location.origin; // 現在のサーバーURLを取得
+			const code = `<script src="${serverUrl}/tag/${projectId}/tracker.js" charset="utf-8"><\/script>`;
+			navigator.clipboard.writeText(code);
+			
+			const span = buttonElement.querySelector('span');
+			span.textContent = '✓ コピーしました';
+			setTimeout(() => {
+				span.textContent = '📋 コピーする';
+			}, 2000);
+		}
 
-    async function createProject() {
-      const name = prompt('プロジェクト名を入力してください');
-      const url = prompt('URLを入力してください（例: https://example.com）');
-      if (!name || !url) return;
+		async function createProject() {
+			const name = prompt('プロジェクト名を入力してください');
+			const url = prompt('URLを入力してください（例: https://example.com）');
+			if (!name || !url) return;
 
-      try {
-        await fetch(`${API_URL}/projects`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, url })
-        });
-        loadProjects();
-      } catch (err) {
-        console.error('Failed to create project:', err);
-      }
-    }
+			try {
+				await fetch(`${API_URL}/projects`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ name, url })
+				});
+				loadProjects();
+			} catch (err) {
+				console.error('Failed to create project:', err);
+			}
+		}
 
-    // イベントリスナーを設定
-    document.getElementById('create-btn').addEventListener('click', createProject);
-    
-    // delegationでコピーボタンのイベントを処理
-    document.getElementById('projects-list').addEventListener('click', (e) => {
-      const btn = e.target.closest('.copy-btn');
-      if (btn) {
-        copyCode(btn.dataset.projectId, btn);
-      }
-    });
+		// イベントリスナーを設定
+		document.getElementById('create-btn').addEventListener('click', createProject);
+		
+		// delegationでコピーボタンのイベントを処理
+		document.getElementById('projects-list').addEventListener('click', (e) => {
+			const btn = e.target.closest('.copy-btn');
+			if (btn) {
+				copyCode(btn.dataset.projectId, btn);
+			}
+		});
 
-    loadProjects();
-  </script>
+		loadProjects();
+	</script>
 </body>
 </html>

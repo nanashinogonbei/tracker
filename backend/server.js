@@ -5,7 +5,7 @@ const useragent = require('useragent');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ type: '*/*' }));
 app.use(express.static('public'));
 
 mongoose.connect('mongodb://mongodb:27017/trackerDB');
@@ -108,44 +108,58 @@ app.get('/api/analytics/:projectId/event-count', async (req, res) => {
 });
 
 app.post('/track', async (req, res) => {
+	console.log('--- New Request ---');
+	console.log('Body:', req.body);
+	console.log('Headers:', req.headers['content-type']);
+	try {
 		const agent = useragent.parse(req.headers['user-agent']);
 		const log = new Log({
-				...req.body,
-				device: agent.device.family === 'Other' ? 'PC' : agent.device.family,
-				browser: agent.family,
-				os: agent.os.family,
-				language: req.headers['accept-language']?.split(',')[0].split('-')[0] || 'unknown',
-				timestamp: new Date()
+			...req.body,
+			device: agent.device.family === 'Other' ? 'PC' : agent.device.family,
+			browser: agent.family,
+			os: agent.os.family,
+			language: req.headers['accept-language']?.split(',')[0].split('-')[0] || 'unknown',
+			timestamp: new Date()
 		});
 		await log.save();
+		console.log('Track saved:', { userId: req.body.userId, event: req.body.event, url: req.body.url });
 		res.json({ status: 'ok' });
+	} catch (err) {
+		console.error('Track error:', err);
+		res.status(500).json({ error: err.message });
+	}
 });
 
 // tracker-sdk.js を配信するためのエンドポイント
-app.get('/load-tracker.js', async (req, res) => {
-    // リクエスト元の Origin (例: https://production-null.work) を取得
-    const origin = req.get('origin') || req.get('referer');
-    
-    if (!origin) {
-        return res.status(403).send('Direct access not allowed');
-    }
+app.get('/tracker.js', async (req, res) => {
+		const origin = req.get('origin') || req.get('referer');
+		
+		if (!origin) {
+				return res.status(403).send('Direct access not allowed');
+		}
 
-    try {
-        // DBに登録されているURLと前方一致（または完全一致）するかチェック
-        // ※DB内のURL末尾の/の有無に柔軟に対応するため正規表現等で調整
-        const projects = await Project.find();
-        const isAuthorized = projects.some(p => origin.startsWith(p.url.replace(/\/$/, "")));
-
-        if (isAuthorized) {
-            // 許可されている場合、publicフォルダ内のJSファイルを返す
-            res.sendFile(__dirname + '/public/tracker-sdk.js');
-        } else {
-            console.warn(`Unauthorized access attempt from: ${origin}`);
-            res.status(403).send('Domain not authorized');
-        }
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
+		try {
+				const project = await Project.findById(req.params.projectId);
+				
+				if (!project) {
+						return res.status(404).send('Project not found');
+				}
+				
+				// プロジェクトのURLとoriginが一致するかチェック
+				const normalizedProjectUrl = project.url.replace(/\/$/, "");
+				const normalizedOrigin = origin.replace(/\/$/, "");
+				
+				if (normalizedOrigin.startsWith(normalizedProjectUrl)) {
+						res.setHeader('Content-Type', 'application/javascript');
+						res.sendFile(__dirname + '/public/tracker-sdk.js');
+				} else {
+						console.warn(`Unauthorized access: ${origin} tried to load tracker for ${project.url}`);
+						res.status(403).send('Domain not authorized');
+				}
+		} catch (err) {
+				console.error('Server Error:', err);
+				res.status(500).send('Server Error');
+		}
 });
 
 app.listen(3000, () => console.log('Server running on port 3000'));
