@@ -14,6 +14,7 @@ const projectSchema = new mongoose.Schema({ name: String, url: String });
 const Project = mongoose.model('Project', projectSchema);
 
 const logSchema = new mongoose.Schema({
+	projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
 	userId: String,
 	url: String,
 	event: String,
@@ -24,6 +25,12 @@ const logSchema = new mongoose.Schema({
 	timestamp: { type: Date, default: Date.now },
 	exitTimestamp: Date
 });
+
+// インデックスの設定
+logSchema.index({ projectId: 1, timestamp: -1 });
+logSchema.index({ projectId: 1, userId: 1 });
+logSchema.index({ projectId: 1, event: 1 });
+
 const Log = mongoose.model('Log', logSchema);
 
 // 日本時間（UTC+9）に変換する関数
@@ -39,6 +46,21 @@ function normalizeUrl(url) {
 		.replace(/^www\./, '')
 		.replace(/\/$/, '')
 		.toLowerCase();
+}
+
+// URLからプロジェクトを検索する関数
+async function findProjectByUrl(url) {
+	const normalizedUrl = normalizeUrl(url);
+	const projects = await Project.find();
+	
+	for (const project of projects) {
+		const normalizedProjectUrl = normalizeUrl(project.url);
+		if (normalizedUrl.startsWith(normalizedProjectUrl) || 
+		    normalizedProjectUrl.startsWith(normalizedUrl)) {
+			return project;
+		}
+	}
+	return null;
 }
 
 app.get('/api/projects', async (req, res) => res.json(await Project.find()));
@@ -59,12 +81,10 @@ app.delete('/api/projects/:id', async (req, res) => {
 			return res.status(404).json({ error: 'Project not found' });
 		}
 
-		const normalizedProjectUrl = normalizeUrl(project.url);
-		await Log.deleteMany({
-			url: { $regex: `^${normalizedProjectUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' }
-		});
-
+		// projectIdで関連ログを削除
+		await Log.deleteMany({ projectId: project._id });
 		await Project.findByIdAndDelete(req.params.id);
+		
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Delete error:', err);
@@ -82,12 +102,9 @@ app.get('/api/analytics/:projectId', async (req, res) => {
 		// 日本時間の日付範囲をそのまま使用（タイムゾーン変換なし）
 		const startDate = new Date(start + 'T00:00:00.000Z');
 		const endDate = new Date(end + 'T23:59:59.999Z');
-		console.log(`start:${start} - end:${end}`);
-		console.log(`startDate:${startDate} - endDate:${endDate}`);
 
-		const normalizedProjectUrl = normalizeUrl(project.url);
 		const query = {
-			url: { $regex: `^${normalizedProjectUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' },
+			projectId: project._id,
 			timestamp: { $gte: startDate, $lte: endDate }
 		};
 
@@ -95,11 +112,6 @@ app.get('/api/analytics/:projectId', async (req, res) => {
 		if (browser) query.browser = { $in: browser.split(',') };
 		if (os) query.os = { $in: os.split(',') };
 		if (language) query.language = { $in: language.split(',') };
-
-		// デバッグ：プロジェクトの全ログを確認
-		const allLogs = await Log.find({
-			url: { $regex: `^${normalizedProjectUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' }
-		}).sort({ timestamp: -1 }).limit(10);
 
 		const [stats, pages, filters] = await Promise.all([
 			Log.aggregate([
@@ -120,7 +132,7 @@ app.get('/api/analytics/:projectId', async (req, res) => {
 				{ $limit: 10 }
 			]),
 			Log.aggregate([
-				{ $match: { url: { $regex: `^${normalizedProjectUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' } } },
+				{ $match: { projectId: project._id } },
 				{ $group: { 
 					_id: null,
 					browsers: { $addToSet: "$browser" },
@@ -164,9 +176,8 @@ app.get('/api/analytics/:projectId/event-count', async (req, res) => {
 		const startDate = new Date(start + 'T00:00:00.000Z');
 		const endDate = new Date(end + 'T23:59:59.999Z');
 
-		const normalizedProjectUrl = normalizeUrl(project.url);
 		const count = await Log.countDocuments({
-			url: { $regex: `^${normalizedProjectUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' },
+			projectId: project._id,
 			event: event,
 			timestamp: { $gte: startDate, $lte: endDate }
 		});
@@ -180,6 +191,13 @@ app.get('/api/analytics/:projectId/event-count', async (req, res) => {
 
 app.post('/track', async (req, res) => {
 	try {
+		// URLからプロジェクトを特定
+		const project = await findProjectByUrl(req.body.url);
+		if (!project) {
+			console.warn(`No project found for URL: ${req.body.url}`);
+			return res.status(404).json({ error: 'Project not found for this URL' });
+		}
+
 		const agent = useragent.parse(req.headers['user-agent']);
 		
 		let deviceType = 'other';
@@ -196,17 +214,17 @@ app.post('/track', async (req, res) => {
 		
 		// 日本時間で保存（UTC+9時間）
 		const jstNow = toJST(new Date());
-		const normalizedUrl = normalizeUrl(req.body.url);
 		
 		const log = new Log({
+			projectId: project._id,
 			userId: req.body.userId,
-			url: normalizedUrl,
+			url: req.body.url,  // 元のURLをそのまま保存
 			event: req.body.event,
 			device: deviceType,
 			browser: agent.family,
 			os: agent.os.family,
 			language: req.headers['accept-language']?.split(',')[0].split('-')[0] || 'unknown',
-			timestamp: jstNow,  // 日本時間で保存
+			timestamp: jstNow,
 			exitTimestamp: req.body.exitTimestamp ? toJST(new Date(req.body.exitTimestamp)) : null
 		});
 		
@@ -227,17 +245,9 @@ app.get('/tracker.js', async (req, res) => {
 	}
 
 	try {
-		const projects = await Project.find();
-		const normalizedOrigin = normalizeUrl(origin);
+		const project = await findProjectByUrl(origin);
 		
-		const isAuthorized = projects.some(project => {
-			const normalizedProjectUrl = normalizeUrl(project.url);
-			const matches = normalizedOrigin.startsWith(normalizedProjectUrl) || 
-			                normalizedProjectUrl.startsWith(normalizedOrigin);
-			return matches;
-		});
-		
-		if (isAuthorized) {
+		if (project) {
 			res.setHeader('Content-Type', 'application/javascript');
 			res.sendFile(__dirname + '/public/tracker-sdk.js');
 		} else {
