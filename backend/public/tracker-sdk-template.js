@@ -2,7 +2,10 @@
 	// サーバー側で置換されるプレースホルダー
 	const PROJECT_ID = '{{PROJECT_ID}}';
 	const API_KEY = '{{API_KEY}}';
-	const SERVER_URL = '{{SERVER_URL}}';
+	const SERVER_HOST = '{{SERVER_HOST}}';
+	
+	// クライアント側でプロトコルを判定してサーバーURLを構築
+	const SERVER_URL = (window.location.protocol === 'https:' ? 'https://' : 'http://') + SERVER_HOST;
 
 	// URLパラメーターをチェック
 	const urlParams = new URLSearchParams(window.location.search);
@@ -23,7 +26,7 @@
 	let isFirstVisit = false;
 	
 	if (!userId) {
-		userId = 'user_' + Math.random().toString(36).substring(2, 11);
+		userId = 'user_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
 		localStorage.setItem('tracker_user_id', userId);
 		isFirstVisit = true;
 	}

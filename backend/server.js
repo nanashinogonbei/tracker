@@ -7,6 +7,10 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+
+// プロキシ信頼設定を追加
+app.set('trust proxy', true);
+
 app.use(cors());
 app.use(express.json({ type: '*/*' }));
 app.use(express.static('public'));
@@ -233,17 +237,24 @@ app.get('/tracker/:projectId.js', async (req, res) => {
 		const templatePath = path.join(__dirname, 'public', 'tracker-sdk-template.js');
 		let sdkTemplate = fs.readFileSync(templatePath, 'utf8');
 
-		// サーバーURLを構築
-		const serverUrl = `${req.protocol}://${req.get('host')}`;
+		// ホスト名のみを埋め込み、プロトコルはクライアント側で判定
+		const host = req.get('host');
 
-		// プレースホルダーを置換
+		// デバッグログ
+		console.log(`SDK Request - Host: ${host}, Headers:`, {
+			proto: req.get('x-forwarded-proto'),
+			protocol: req.protocol,
+			secure: req.secure
+		});
+
+		// プレースホルダーを置換（SERVER_URLにはホスト名のみ）
 		const customizedSdk = sdkTemplate
 			.replace('{{PROJECT_ID}}', project._id.toString())
 			.replace('{{API_KEY}}', project.apiKey)
-			.replace('{{SERVER_URL}}', serverUrl);
+			.replace('{{SERVER_HOST}}', host);
 
 		res.setHeader('Content-Type', 'application/javascript');
-		res.setHeader('Cache-Control', 'public, max-age=3600'); // 1時間キャッシュ
+		res.setHeader('Cache-Control', 'public, max-age=3600');
 		res.send(customizedSdk);
 	} catch (err) {
 		console.error('SDK Error:', err);
