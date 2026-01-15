@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const useragent = require('useragent');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -10,7 +13,11 @@ app.use(express.static('public'));
 
 mongoose.connect('mongodb://mongodb:27017/trackerDB');
 
-const projectSchema = new mongoose.Schema({ name: String, url: String });
+const projectSchema = new mongoose.Schema({ 
+	name: String, 
+	url: String,
+	apiKey: { type: String, required: true, unique: true }
+});
 const Project = mongoose.model('Project', projectSchema);
 
 const logSchema = new mongoose.Schema({
@@ -63,15 +70,30 @@ async function findProjectByUrl(url) {
 	return null;
 }
 
-app.get('/api/projects', async (req, res) => res.json(await Project.find()));
+app.get('/api/projects', async (req, res) => {
+	const projects = await Project.find();
+	// APIキーは管理画面にのみ表示（セキュリティのため削除しない）
+	res.json(projects);
+});
 
 app.post('/api/projects', async (req, res) => {
-	const normalizedUrl = normalizeUrl(req.body.url);
-	const project = new Project({
-		name: req.body.name,
-		url: normalizedUrl
-	});
-	res.json(await project.save());
+	try {
+		// ランダムなAPIキーを生成
+		const apiKey = crypto.randomBytes(32).toString('hex');
+		
+		const normalizedUrl = normalizeUrl(req.body.url);
+		const project = new Project({
+			name: req.body.name,
+			url: normalizedUrl,
+			apiKey: apiKey
+		});
+		
+		const saved = await project.save();
+		res.json(saved);
+	} catch (err) {
+		console.error('Create project error:', err);
+		res.status(500).json({ error: err.message });
+	}
 });
 
 app.delete('/api/projects/:id', async (req, res) => {
@@ -189,15 +211,72 @@ app.get('/api/analytics/:projectId/event-count', async (req, res) => {
 	}
 });
 
-app.post('/track', async (req, res) => {
+// プロジェクトごとのカスタマイズSDKを配信
+app.get('/tracker/:projectId.js', async (req, res) => {
 	try {
-		// URLからプロジェクトを特定
-		const project = await findProjectByUrl(req.body.url);
+		const project = await Project.findById(req.params.projectId);
 		if (!project) {
-			console.warn(`No project found for URL: ${req.body.url}`);
-			return res.status(404).json({ error: 'Project not found for this URL' });
+			return res.status(404).send('// Project not found');
 		}
 
+		// Origin/Refererチェック（オプション）
+		const origin = req.get('origin') || req.get('referer');
+		if (origin) {
+			const requestProject = await findProjectByUrl(origin);
+			if (!requestProject || requestProject._id.toString() !== project._id.toString()) {
+				console.warn(`Unauthorized SDK access: ${origin} for project ${project._id}`);
+				return res.status(403).send('// Domain not authorized');
+			}
+		}
+
+		// SDKテンプレートを読み込み
+		const templatePath = path.join(__dirname, 'public', 'tracker-sdk-template.js');
+		let sdkTemplate = fs.readFileSync(templatePath, 'utf8');
+
+		// サーバーURLを構築
+		const serverUrl = `${req.protocol}://${req.get('host')}`;
+
+		// プレースホルダーを置換
+		const customizedSdk = sdkTemplate
+			.replace('{{PROJECT_ID}}', project._id.toString())
+			.replace('{{API_KEY}}', project.apiKey)
+			.replace('{{SERVER_URL}}', serverUrl);
+
+		res.setHeader('Content-Type', 'application/javascript');
+		res.setHeader('Cache-Control', 'public, max-age=3600'); // 1時間キャッシュ
+		res.send(customizedSdk);
+	} catch (err) {
+		console.error('SDK Error:', err);
+		res.status(500).send('// Server Error');
+	}
+});
+
+// トラッキングエンドポイント（認証強化版）
+app.post('/track', async (req, res) => {
+	try {
+		const { projectId, apiKey, userId, url, event, exitTimestamp } = req.body;
+
+		// 必須パラメータのチェック
+		if (!projectId || !apiKey || !userId || !url || !event) {
+			return res.status(400).json({ error: 'Missing required parameters' });
+		}
+
+		// APIキーとプロジェクトIDの検証
+		const project = await Project.findOne({ _id: projectId, apiKey: apiKey });
+		if (!project) {
+			console.warn(`Invalid credentials: projectId=${projectId}`);
+			return res.status(403).json({ error: 'Invalid credentials' });
+		}
+
+		// URLの検証（プロジェクトのドメインと一致するか）
+		const normalizedRequestUrl = normalizeUrl(url);
+		const normalizedProjectUrl = normalizeUrl(project.url);
+		if (!normalizedRequestUrl.startsWith(normalizedProjectUrl)) {
+			console.warn(`URL mismatch: ${url} does not match project ${project.url}`);
+			return res.status(403).json({ error: 'URL mismatch' });
+		}
+
+		// User-Agent解析
 		const agent = useragent.parse(req.headers['user-agent']);
 		
 		let deviceType = 'other';
@@ -212,20 +291,20 @@ app.post('/track', async (req, res) => {
 			deviceType = 'SP';
 		}
 		
-		// 日本時間で保存（UTC+9時間）
+		// 日本時間で保存
 		const jstNow = toJST(new Date());
 		
 		const log = new Log({
 			projectId: project._id,
-			userId: req.body.userId,
-			url: req.body.url,  // 元のURLをそのまま保存
-			event: req.body.event,
+			userId: userId,
+			url: url,
+			event: event,
 			device: deviceType,
 			browser: agent.family,
 			os: agent.os.family,
 			language: req.headers['accept-language']?.split(',')[0].split('-')[0] || 'unknown',
 			timestamp: jstNow,
-			exitTimestamp: req.body.exitTimestamp ? toJST(new Date(req.body.exitTimestamp)) : null
+			exitTimestamp: exitTimestamp ? toJST(new Date(exitTimestamp)) : null
 		});
 		
 		await log.save();
@@ -233,30 +312,6 @@ app.post('/track', async (req, res) => {
 	} catch (err) {
 		console.error('Track error:', err);
 		res.status(500).json({ error: err.message });
-	}
-});
-
-app.get('/tracker.js', async (req, res) => {
-	const origin = req.get('origin') || req.get('referer');
-	
-	if (!origin) {
-		res.setHeader('Content-Type', 'application/javascript');
-		return res.sendFile(__dirname + '/public/tracker-sdk.js');
-	}
-
-	try {
-		const project = await findProjectByUrl(origin);
-		
-		if (project) {
-			res.setHeader('Content-Type', 'application/javascript');
-			res.sendFile(__dirname + '/public/tracker-sdk.js');
-		} else {
-			console.warn(`Unauthorized access: ${origin} is not registered`);
-			res.status(403).send('Domain not authorized');
-		}
-	} catch (err) {
-		console.error('Tracker.js Error:', err);
-		res.status(500).send('Server Error');
 	}
 });
 

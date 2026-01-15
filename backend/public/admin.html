@@ -51,13 +51,17 @@
 						</div>
 
 						<div class="flex-shrink-0">
-							<div class="text-sm font-medium mb-2">SDK</div>
-								<div class="bg-gray-50 p-3 rounded text-xs font-mono mb-2 max-w-md">
-									&lt;script src="${window.location.origin}/tracker.js" charset="utf-8"&gt;&lt;/script&gt;
-								</div>
-							<button data-project-id="${project._id}" class="copy-btn w-full bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600">
+							<div class="text-sm font-medium mb-2">SDK（セキュア版）</div>
+							<div class="bg-gray-50 p-3 rounded text-xs font-mono mb-2 max-w-md break-all">
+								&lt;script src="${window.location.origin}/tracker/${project._id}.js" charset="utf-8"&gt;&lt;/script&gt;
+							</div>
+							<button data-project-id="${project._id}" class="copy-btn w-full bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 mb-2">
 								<span>📋 コピーする</span>
 							</button>
+							<div class="text-xs text-gray-500 mt-2">
+								<div class="font-medium mb-1">API Key:</div>
+								<div class="bg-gray-100 p-2 rounded font-mono break-all">${project.apiKey}</div>
+							</div>
 						</div>
 					</div>
 				`).join('');
@@ -66,10 +70,9 @@
 			}
 		}
 
-		// copyCode関数を修正
 		function copyCode(projectId, buttonElement) {
-			const serverUrl = window.location.origin; // 現在のサーバーURLを取得
-			const code = `<script src="${serverUrl}/tracker.js" charset="utf-8"><\/script>`;
+			const serverUrl = window.location.origin;
+			const code = `<script src="${serverUrl}/tracker/${projectId}.js" charset="utf-8"><\/script>`;
 			navigator.clipboard.writeText(code);
 			
 			const span = buttonElement.querySelector('span');
