@@ -8,7 +8,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; }
     .container { display: flex; min-height: 100vh; }
-    .sidebar { width: 16rem; background: white; border-right: 1px solid #e5e7eb; padding: 24px; }
+    .sidebar { width: 176px; background: white; border-right: 1px solid #e5e7eb; padding: 24px; }
     .sidebar a { display: block; width: 100%; padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; text-decoration: none; color: #374151; font-size: 14px; margin-bottom: 8px; }
     .sidebar-item { padding: 8px 16px; font-size: 14px; color: #6b7280; }
     .main { flex: 1; padding: 32px; max-width: 1200px; }
@@ -38,9 +38,17 @@
     .condition-content { display: none; }
     .condition-content.show { display: block; }
     .condition-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: start; }
-    .condition-row input { flex: 1; }
+    .condition-row input { flex: 1; position: relative; }
     .condition-row select { min-width: 180px; }
     .condition-row textarea { flex: 1; min-height: 100px; }
+    .suggest-input-wrapper { position: relative; flex: 1; }
+    .suggest-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .suggest-dropdown.show { display: block; }
+    .suggest-option { padding: 8px 12px; cursor: pointer; font-size: 14px; }
+    .suggest-option:hover { background: #f3f4f6; }
+    .suggest-option.active { background: #e0e7ff; }
+    .condition-footer { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .btn-add-condition { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
     .btn-add { background: #3b82f6; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .btn-remove { color: #ef4444; background: none; border: none; padding: 8px 16px; cursor: pointer; }
     .creative-section { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
@@ -67,7 +75,7 @@
 <body>
   <div class="container">
     <aside class="sidebar">
-      <div class="sidebar-item"><a href="./admin.html">プロジェクト管理</a></div>
+      <a href="#" onclick="goBack(); return false;">プロジェクト管理</a>
       <div class="sidebar-item">アカウント管理</div>
     </aside>
 
@@ -117,38 +125,38 @@
         <div class="section-title">実行条件</div>
         
         <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('device')">
+          <div class="condition-header collapsed" onclick="toggleCondition('device')">
             <span>デバイス</span>
           </div>
-          <div class="condition-content show" id="condition-device"></div>
+          <div class="condition-content" id="condition-device"></div>
         </div>
 
         <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('language')">
+          <div class="condition-header collapsed" onclick="toggleCondition('language')">
             <span>言語</span>
           </div>
-          <div class="condition-content show" id="condition-language"></div>
+          <div class="condition-content" id="condition-language"></div>
         </div>
 
         <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('os')">
+          <div class="condition-header collapsed" onclick="toggleCondition('os')">
             <span>OS</span>
           </div>
-          <div class="condition-content show" id="condition-os"></div>
+          <div class="condition-content" id="condition-os"></div>
         </div>
 
         <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('browser')">
+          <div class="condition-header collapsed" onclick="toggleCondition('browser')">
             <span>ブラウザ</span>
           </div>
-          <div class="condition-content show" id="condition-browser"></div>
+          <div class="condition-content" id="condition-browser"></div>
         </div>
 
         <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('other')">
+          <div class="condition-header collapsed" onclick="toggleCondition('other')">
             <span>その他</span>
           </div>
-          <div class="condition-content show" id="condition-other"></div>
+          <div class="condition-content" id="condition-other"></div>
         </div>
       </div>
 
@@ -200,6 +208,8 @@
     let conditions = { device: [], language: [], os: [], browser: [], other: [] };
     let creatives = [];
     let currentCreativeIndex = -1;
+    let suggestionData = null;
+    let activeInputId = null;
 
     const conditionTypes = [
       { value: 'regex', label: '正規表現に一致' },
@@ -215,7 +225,19 @@
       { value: 'notOneOf', label: '次のいずれでもない' }
     ];
 
+    async function loadSuggestions() {
+      try {
+        const res = await fetch(`${API_URL}/suggestions`);
+        suggestionData = await res.json();
+      } catch (err) {
+        console.error('Failed to load suggestions:', err);
+        suggestionData = { devices: [], browsers: [], oss: [], languages: [] };
+      }
+    }
+
     async function loadABTest() {
+      await loadSuggestions();
+      
       if (!abtestId) {
         // 新規作成モード
         document.getElementById('test-name').value = '';
@@ -283,6 +305,12 @@
             renderConditionRow(type, index);
           });
         }
+        
+        // 追加ボタンを追加
+        const footer = document.createElement('div');
+        footer.className = 'condition-footer';
+        footer.innerHTML = `<button class="btn-add-condition" onclick="addConditionRow('${type}')">追加</button>`;
+        container.appendChild(footer);
       });
     }
 
@@ -292,6 +320,9 @@
       
       const row = document.createElement('div');
       row.className = 'condition-row';
+      
+      const inputId = `condition-input-${type}-${index}`;
+      const dropdownId = `suggest-dropdown-${type}-${index}`;
       
       if (type === 'other') {
         row.innerHTML = `
@@ -311,7 +342,17 @@
         `;
       } else {
         row.innerHTML = `
-          <input type="text" data-type="${type}" data-index="${index}" data-field="value" value="${condition.value || ''}" placeholder="値を入力">
+          <div class="suggest-input-wrapper">
+            <input type="text" 
+                   id="${inputId}"
+                   data-type="${type}" 
+                   data-index="${index}" 
+                   data-field="value" 
+                   value="${condition.value || ''}" 
+                   placeholder="値を入力"
+                   autocomplete="off">
+            <div class="suggest-dropdown" id="${dropdownId}"></div>
+          </div>
           <select data-type="${type}" data-index="${index}" data-field="condition">
             ${conditionTypes.map(ct => `<option value="${ct.value}" ${condition.condition === ct.value ? 'selected' : ''}>${ct.label}</option>`).join('')}
           </select>
@@ -323,7 +364,107 @@
         `;
       }
       
-      container.appendChild(row);
+      // 最後の追加ボタンの前に挿入
+      const footer = container.querySelector('.condition-footer');
+      if (footer) {
+        container.insertBefore(row, footer);
+      } else {
+        container.appendChild(row);
+      }
+      
+      // サジェスト機能のイベントリスナーを追加
+      if (type !== 'other') {
+        setupSuggest(inputId, dropdownId, type);
+      }
+    }
+
+    function setupSuggest(inputId, dropdownId, type) {
+      const input = document.getElementById(inputId);
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (!input || !dropdown) return;
+      
+      let currentIndex = -1;
+      
+      input.addEventListener('input', (e) => {
+        const value = e.target.value.toLowerCase();
+        const suggestions = getSuggestions(type, value);
+        
+        if (suggestions.length === 0 || value === '') {
+          dropdown.classList.remove('show');
+          return;
+        }
+        
+        dropdown.innerHTML = suggestions
+          .map((s, i) => `<div class="suggest-option ${i === 0 ? 'active' : ''}" data-value="${s}">${s}</div>`)
+          .join('');
+        dropdown.classList.add('show');
+        currentIndex = -1;
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        const options = dropdown.querySelectorAll('.suggest-option');
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          currentIndex = Math.min(currentIndex + 1, options.length - 1);
+          updateActiveOption(options, currentIndex);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          currentIndex = Math.max(currentIndex - 1, -1);
+          updateActiveOption(options, currentIndex);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (currentIndex >= 0 && options[currentIndex]) {
+            input.value = options[currentIndex].dataset.value;
+            dropdown.classList.remove('show');
+            input.dispatchEvent(new Event('change'));
+          }
+        } else if (e.key === 'Escape') {
+          dropdown.classList.remove('show');
+        }
+      });
+      
+      dropdown.addEventListener('click', (e) => {
+        const option = e.target.closest('.suggest-option');
+        if (option) {
+          input.value = option.dataset.value;
+          dropdown.classList.remove('show');
+          input.dispatchEvent(new Event('change'));
+        }
+      });
+      
+      // クリック外を検知して閉じる
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.remove('show');
+        }
+      });
+    }
+
+    function getSuggestions(type, value) {
+      if (!suggestionData) return [];
+      
+      const dataMap = {
+        device: suggestionData.devices || [],
+        browser: suggestionData.browsers || [],
+        os: suggestionData.oss || [],
+        language: suggestionData.languages || []
+      };
+      
+      const data = dataMap[type] || [];
+      return data.filter(item => item.toLowerCase().includes(value)).slice(0, 10);
+    }
+
+    function updateActiveOption(options, index) {
+      options.forEach((opt, i) => {
+        if (i === index) {
+          opt.classList.add('active');
+          opt.scrollIntoView({ block: 'nearest' });
+        } else {
+          opt.classList.remove('active');
+        }
+      });
     }
 
     function isMultiValueCondition(conditionType) {
@@ -339,7 +480,12 @@
     function removeConditionRow(type, index) {
       conditions[type].splice(index, 1);
       const container = document.getElementById(`condition-${type}`);
-      container.innerHTML = '';
+      
+      // 追加ボタンを除く全ての行を削除
+      const rows = container.querySelectorAll('.condition-row');
+      rows.forEach(row => row.remove());
+      
+      // 条件を再描画
       conditions[type].forEach((_, i) => renderConditionRow(type, i));
       
       if (conditions[type].length === 0) {
@@ -373,7 +519,10 @@
         // 条件タイプが変更されたら、テキストエリアを再描画
         if (field === 'condition') {
           const container = document.getElementById(`condition-${type}`);
-          container.innerHTML = '';
+          // 追加ボタンを除く全ての行を削除
+          const rows = container.querySelectorAll('.condition-row');
+          rows.forEach(row => row.remove());
+          // 条件を再描画
           conditions[type].forEach((_, i) => renderConditionRow(type, i));
         }
       }
@@ -512,7 +661,7 @@
 
         if (res.ok) {
           alert('保存しました');
-          location.href = `test_index.html?id=${projectId}`;
+          location.href = `abtest-list.html?id=${projectId}`;
         } else {
           alert('保存に失敗しました');
         }
@@ -523,7 +672,7 @@
     }
 
     function goBack() {
-      location.href = `test_index.html?id=${projectId}`;
+      location.href = `abtest-list.html?id=${projectId}`;
     }
 
     loadABTest();
