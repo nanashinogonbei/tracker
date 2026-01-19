@@ -39,6 +39,7 @@
     const projectId = new URLSearchParams(location.search).get('id');
     
     let project = null;
+    let abtestsStats = new Map(); // ABテストIDをキーに統計情報を保存
 
     async function loadProject() {
       const res = await fetch(`${API_URL}/projects`);
@@ -47,6 +48,18 @@
       
       document.getElementById('project-name').textContent = project.name;
       document.getElementById('project-url').textContent = project.url;
+    }
+
+    async function loadABTestStats(abtestId) {
+      try {
+        const res = await fetch(`${API_URL}/abtests/${abtestId}/stats`);
+        const stats = await res.json();
+        abtestsStats.set(abtestId, stats);
+        return stats;
+      } catch (err) {
+        console.error('Failed to load stats for', abtestId, err);
+        return null;
+      }
     }
 
     async function loadABTests() {
@@ -60,17 +73,37 @@
           return;
         }
 
+        // 各ABテストの統計情報を並行して取得
+        const statsPromises = abtests.map(abtest => loadABTestStats(abtest._id));
+        await Promise.all(statsPromises);
+
+        // ABテストリストを表示
         list.innerHTML = abtests.map(abtest => {
           const dateRange = formatDateRange(abtest.startDate, abtest.endDate);
+          const stats = abtestsStats.get(abtest._id);
+          
+          // 統計情報の表示
+          let statsHtml = '<div class="text-sm text-gray-600 mb-1">統計: 読み込み中...</div>';
+          if (stats && stats.total) {
+            statsHtml = `
+              <div class="text-sm text-gray-600 mb-1">
+                合計実行回数: <span class="font-semibold">${stats.total.totalImpressions.toLocaleString()}</span>回 | 
+                CV: <span class="font-semibold">${stats.total.totalConversions.toLocaleString()}</span> | 
+                CVR: <span class="font-semibold">${stats.total.totalCvr.toFixed(2)}</span>%
+              </div>
+            `;
+          }
+          
           return `
             <div class="bg-gray-100 rounded-lg p-6 flex items-start gap-6">
               <div class="w-32 h-24 bg-gray-300 rounded flex-shrink-0"></div>
               
               <div class="flex-1">
                 <h3 class="font-bold text-lg mb-1">${abtest.name}</h3>
-                <p class="text-sm text-gray-600 mb-1">対象URL：${abtest.targetUrl}</p>
-                <p class="text-sm text-gray-600 mb-3">テスト期間：${dateRange}</p>
-                <div class="flex gap-4">
+                <p class="text-sm text-gray-600 mb-1">対象URL：${abtest.targetUrl || '全てのページ'}</p>
+                <p class="text-sm text-gray-600 mb-1">テスト期間：${dateRange}</p>
+                ${statsHtml}
+                <div class="flex gap-4 mt-2">
                   <a href="test_detail.html?id=${abtest._id}&projectId=${projectId}" class="text-blue-500 text-sm hover:underline">詳細</a>
                   <a href="#" data-abtest-id="${abtest._id}" class="delete-link text-red-500 text-sm hover:underline">削除</a>
                 </div>

@@ -642,9 +642,96 @@
       location.href = `test_index.html?id=${projectId}`;
     }
 
+    let statsData = null;
+    async function loadABTestStats() {
+      if (!abtestId) return;
+      
+      try {
+        const res = await fetch(`${API_URL}/abtests/${abtestId}/stats`);
+        statsData = await res.json();
+        updateStatsDisplay();
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+    }
+
+    function updateStatsDisplay() {
+      if (!statsData) return;
+      
+      // 合計統計の更新
+      document.getElementById('total-impressions').textContent = 
+        statsData.total.totalImpressions.toLocaleString();
+      document.getElementById('total-cv').textContent = 
+        statsData.total.totalConversions.toLocaleString();
+      document.getElementById('total-cvr').textContent = 
+        statsData.total.totalCvr.toFixed(2);
+    }
+
+    function renderCreatives() {
+      const container = document.getElementById('creatives-list');
+      container.innerHTML = '';
+      
+      creatives.forEach((creative, index) => {
+        // 統計情報の取得
+        let statsHtml = `
+          <div class="creative-stats">
+            <div>-</div>
+            <div>CV: -</div>
+            <div>CVR: -</div>
+          </div>
+        `;
+        
+        if (statsData && statsData.stats && statsData.stats[index]) {
+          const stat = statsData.stats[index];
+          statsHtml = `
+            <div class="creative-stats">
+              <div>${stat.impressions.toLocaleString()}回</div>
+              <div>CV: ${stat.conversions.toLocaleString()}</div>
+              <div>CVR: ${stat.cvr.toFixed(3)}%</div>
+            </div>
+          `;
+        }
+        
+        const row = document.createElement('div');
+        row.className = 'creative-row';
+        row.innerHTML = `
+          <div class="creative-col">
+            <label>名称</label>
+            <input type="text" value="${creative.name || ''}" data-creative-index="${index}" data-field="name" placeholder="${creative.isOriginal ? 'オリジナル' : '名称'}">
+          </div>
+          <div class="creative-col">
+            <label>配分</label>
+            <input type="number" value="${creative.distribution || 0}" data-creative-index="${index}" data-field="distribution" min="0" max="100">%
+          </div>
+          <div class="creative-col">
+            <label>合計実行回数</label>
+            ${statsHtml}
+          </div>
+          <div class="creative-col" style="justify-content: flex-end;">
+            ${creative.isOriginal ? 
+              '<div style="font-size: 12px; color: #6b7280; padding: 8px;">オリジナル</div>' : 
+              `<button class="btn-code" onclick="openCodeModal(${index})">コードを登録</button>`
+            }
+          </div>
+          <div class="creative-col" style="justify-content: flex-end;">
+            <button class="btn-remove" onclick="removeCreative(${index})">削除</button>
+          </div>
+          <div class="creative-col" style="justify-content: flex-end;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" ${creative.isOriginal ? 'checked' : ''} data-creative-index="${index}" data-field="isOriginal">
+              <span style="font-size: 13px;">オリジナルを選択</span>
+            </label>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // init関数を修正
     async function init() {
       await loadSuggestions();
       await loadABTest();
+      await loadABTestStats(); // 統計情報の読み込みを追加
     }
 
     init();
