@@ -1,79 +1,487 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ABテスト詳細 - Webトラッカー</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; }
-    .container { display: flex; min-height: 100vh; }
-    .sidebar { width: 16rem; background: white; border-right: 1px solid #e5e7eb; padding: 24px; }
-    .sidebar a { display: block; width: 100%; padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; text-decoration: none; color: #374151; font-size: 14px; margin-bottom: 8px; }
-    .sidebar-item { padding: 8px 16px; font-size: 14px; color: #6b7280; }
-    .main { flex: 1; padding: 32px; max-width: 1200px; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    .header-left input { font-size: 20px; font-weight: bold; border: none; background: transparent; padding: 4px; }
-    .toggle-container { display: flex; align-items: center; gap: 12px; }
-    .toggle-label { font-size: 14px; font-weight: 500; }
-    .toggle-switch { position: relative; width: 56px; height: 32px; cursor: pointer; }
-    .toggle-switch input { display: none; }
-    .toggle-bg { position: absolute; inset: 0; background: #d1d5db; border-radius: 9999px; transition: background 0.3s; }
-    .toggle-switch input:checked + .toggle-bg { background: #22c55e; }
-    .toggle-handle { position: absolute; left: 4px; top: 4px; width: 24px; height: 24px; background: white; border-radius: 50%; transition: transform 0.3s; }
-    .toggle-switch input:checked ~ .toggle-handle { transform: translateX(24px); }
-    .section { background: #fffbeb; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
-    .section-title { font-size: 16px; font-weight: 500; margin-bottom: 16px; }
-    .form-group { margin-bottom: 16px; }
-    .form-label { display: block; font-size: 14px; margin-bottom: 8px; }
-    .form-input, .form-textarea { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
-    .form-textarea { min-height: 60px; resize: vertical; font-family: monospace; }
-    .form-row { display: flex; gap: 16px; align-items: center; }
-    .date-separator { padding: 8px; }
-    .time-input { width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
-    .condition-group { margin-bottom: 16px; padding: 16px; background: white; border-radius: 8px; }
-    .condition-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; cursor: pointer; }
-    .condition-header::after { content: '▼'; transition: transform 0.3s; }
-    .condition-header.collapsed::after { transform: rotate(-90deg); }
-    .condition-content { display: none; }
-    .condition-content.show { display: block; }
-    .condition-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
-    .condition-row input { flex: 1; }
-    .condition-row select { min-width: 180px; }
-    .condition-row textarea { flex: 1; min-height: 100px; }
-    .btn-add { background: #3b82f6; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .btn-add-condition { background: #3b82f6; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 20px; cursor: pointer; margin-top: 8px; }
-    .btn-add-condition:hover { background: #2563eb; }
-    .btn-remove { color: #ef4444; background: none; border: none; padding: 8px 16px; cursor: pointer; }
-    .creative-section { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
-    .creative-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; align-items: center; }
-    .creative-col { display: flex; flex-direction: column; }
-    .creative-col label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
-    .creative-col input, .creative-col select { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
-    .creative-stats { display: flex; flex-direction: column; }
-    .creative-stats div { font-size: 12px; color: #6b7280; }
-    .btn-code { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; white-space: nowrap; }
-    .btn-save { background: #3b82f6; color: white; border: none; padding: 12px 32px; border-radius: 4px; cursor: pointer; font-size: 16px; }
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-    .modal.show { display: flex; }
-    .modal-content { background: white; border-radius: 8px; padding: 32px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; }
-    .modal-header { font-size: 20px; font-weight: bold; margin-bottom: 24px; }
-    .modal-section { margin-bottom: 24px; }
-    .modal-section-title { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
-    .code-editor { width: 100%; min-height: 200px; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; }
-    .modal-footer { display: flex; justify-content: center; gap: 16px; margin-top: 24px; }
-    .btn-modal-save { background: #3b82f6; color: white; border: none; padding: 12px 48px; border-radius: 4px; cursor: pointer; font-size: 16px; }
-    .btn-modal-cancel { background: #e5e7eb; border: none; padding: 12px 48px; border-radius: 4px; cursor: pointer; font-size: 16px; }
-    
-    .other-condition-container { display: flex; gap: 24px; }
-    .other-condition-left { display: flex; gap: 12px; align-items: center; }
-    .other-condition-right { display: flex; gap: 12px; align-items: center; flex: 1; }
-    .other-condition-label { font-size: 14px; color: #374151; white-space: nowrap; }
-    .other-condition-number { width: 100px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center; }
-    .other-condition-url { flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; color: #9ca3af; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f9fafb;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 16rem;
+      background: white;
+      border-right: 1px solid #e5e7eb;
+      padding: 24px;
+    }
+
+    .sidebar a {
+      display: block;
+      width: 100%;
+      padding: 8px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      text-align: center;
+      text-decoration: none;
+      color: #374151;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-item {
+      padding: 8px 16px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .main {
+      flex: 1;
+      padding: 32px;
+      max-width: 1200px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-left input {
+      font-size: 20px;
+      font-weight: bold;
+      border: none;
+      background: transparent;
+      padding: 4px;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toggle-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 56px;
+      height: 32px;
+      cursor: pointer;
+    }
+
+    .toggle-switch input {
+      display: none;
+    }
+
+    .toggle-bg {
+      position: absolute;
+      inset: 0;
+      background: #d1d5db;
+      border-radius: 9999px;
+      transition: background 0.3s;
+    }
+
+    .toggle-switch input:checked+.toggle-bg {
+      background: #22c55e;
+    }
+
+    .toggle-handle {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle-switch input:checked~.toggle-handle {
+      transform: translateX(24px);
+    }
+
+    .section {
+      background: #fffbeb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .form-textarea {
+      min-height: 60px;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .date-separator {
+      padding: 8px;
+    }
+
+    .time-input {
+      width: 120px;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .condition-group {
+      margin-bottom: 16px;
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    .condition-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+
+    .condition-header::after {
+      content: '▼';
+      transition: transform 0.3s;
+    }
+
+    .condition-header.collapsed::after {
+      transform: rotate(-90deg);
+    }
+
+    .condition-content {
+      display: none;
+    }
+
+    .condition-content.show {
+      display: block;
+    }
+
+    .condition-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .condition-row input {
+      flex: 1;
+    }
+
+    .condition-row select {
+      min-width: 180px;
+    }
+
+    .condition-row textarea {
+      flex: 1;
+      min-height: 100px;
+    }
+
+    .btn-add {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-remove {
+      color: #ef4444;
+      background: none;
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+
+    .creative-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .creative-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+      align-items: center;
+    }
+
+    .creative-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .creative-col label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .creative-col input,
+    .creative-col select {
+      padding: 6px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .creative-stats {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .creative-stats div {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .btn-code {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .btn-save {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 32px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 24px;
+    }
+
+    .modal-section {
+      margin-bottom: 24px;
+    }
+
+    .modal-section-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .code-editor {
+      width: 100%;
+      min-height: 200px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .btn-modal-save {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 48px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .btn-modal-cancel {
+      background: #e5e7eb;
+      border: none;
+      padding: 12px 48px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .btn-add {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-add-condition {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 20px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .btn-add-condition:hover {
+      background: #2563eb;
+    }
+
+    .btn-remove {
+      color: #ef4444;
+      background: none;
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+
+    .other-condition-container {
+      display: flex;
+      gap: 24px;
+    }
+
+    .other-condition-left {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .other-condition-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex: 1;
+    }
+
+    .other-condition-label {
+      font-size: 14px;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .other-condition-number {
+      width: 100px;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .other-condition-url {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #9ca3af;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <aside class="sidebar">
@@ -131,13 +539,12 @@
 
       <div class="section">
         <div class="section-title">実行条件</div>
-        
+
         <div class="condition-group">
           <div class="condition-header" onclick="toggleCondition('device')">
             <span>デバイス</span>
           </div>
           <div class="condition-content show" id="condition-device"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('device')">+</button>
         </div>
 
         <div class="condition-group">
@@ -145,7 +552,6 @@
             <span>言語</span>
           </div>
           <div class="condition-content show" id="condition-language"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('language')">+</button>
         </div>
 
         <div class="condition-group">
@@ -153,7 +559,6 @@
             <span>OS</span>
           </div>
           <div class="condition-content show" id="condition-os"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('os')">+</button>
         </div>
 
         <div class="condition-group">
@@ -161,7 +566,6 @@
             <span>ブラウザ</span>
           </div>
           <div class="condition-content show" id="condition-browser"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('browser')">+</button>
         </div>
 
         <div class="condition-group">
@@ -192,7 +596,7 @@
   <div id="code-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">コードを登録</div>
-      
+
       <div class="modal-section">
         <div class="modal-section-title">CSS</div>
         <textarea id="modal-css" class="code-editor" placeholder=".hoge {&#10;  width: 100px;&#10;}"></textarea>
@@ -215,12 +619,11 @@
     const params = new URLSearchParams(location.search);
     const abtestId = params.get('id');
     const projectId = params.get('projectId');
-    
+
     let currentABTest = null;
     let conditions = { device: [], language: [], os: [], browser: [], other: [] };
     let creatives = [];
     let currentCreativeIndex = -1;
-    let suggestionData = null;
 
     const conditionTypes = [
       { value: 'regex', label: '正規表現に一致' },
@@ -248,14 +651,14 @@
       try {
         const res = await fetch(`${API_URL}/abtests/${abtestId}`);
         currentABTest = await res.json();
-        
+
         document.getElementById('test-name').value = currentABTest.name || '';
         document.getElementById('test-active').checked = currentABTest.active || false;
         document.getElementById('toggle-label').textContent = currentABTest.active ? 'ON' : 'OFF';
         document.getElementById('cv-code').value = currentABTest.cvCode || '';
         document.getElementById('target-url').value = currentABTest.targetUrl || '';
         document.getElementById('exclude-url').value = currentABTest.excludeUrl || '';
-        
+
         if (currentABTest.startDate) {
           document.getElementById('start-date').value = formatDateForInput(currentABTest.startDate);
         }
@@ -267,12 +670,12 @@
         const sessionMinutes = currentABTest.sessionDuration || 720;
         const hours = Math.floor(sessionMinutes / 60);
         const minutes = sessionMinutes % 60;
-        document.getElementById('session-duration').value = 
+        document.getElementById('session-duration').value =
           `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
         conditions = currentABTest.conditions || { device: [], language: [], os: [], browser: [], other: [] };
         creatives = currentABTest.creatives || [];
-        
+
         if (creatives.length === 0) {
           addCreative();
         }
@@ -282,43 +685,6 @@
       } catch (err) {
         console.error('Failed to load ABTest:', err);
       }
-    }
-
-    async function loadSuggestions() {
-      try {
-        const res = await fetch(`${API_URL}/suggestions`);
-        suggestionData = await res.json();
-        createDataLists();
-      } catch (err) {
-        console.error('Failed to load suggestions:', err);
-        suggestionData = { devices: [], browsers: [], oss: [], languages: [] };
-      }
-    }
-
-    function createDataLists() {
-      // 既存のdatalistを削除
-      document.querySelectorAll('datalist[id^="suggestions-"]').forEach(el => el.remove());
-      
-      // 各タイプのdatalistを作成
-      const types = [
-        { id: 'device', data: suggestionData.devices || [] },
-        { id: 'browser', data: suggestionData.browsers || [] },
-        { id: 'os', data: suggestionData.oss || [] },
-        { id: 'language', data: suggestionData.languages || [] }
-      ];
-      
-      types.forEach(type => {
-        const datalist = document.createElement('datalist');
-        datalist.id = `suggestions-${type.id}`;
-        
-        type.data.forEach(value => {
-          const option = document.createElement('option');
-          option.value = value;
-          datalist.appendChild(option);
-        });
-        
-        document.body.appendChild(datalist);
-      });
     }
 
     function formatDateForInput(dateString) {
@@ -340,7 +706,7 @@
       ['device', 'language', 'os', 'browser', 'other'].forEach(type => {
         const container = document.getElementById(`condition-${type}`);
         container.innerHTML = '';
-        
+
         if (conditions[type].length === 0) {
           addConditionRow(type);
         } else {
@@ -354,9 +720,9 @@
     function renderConditionRow(type, index) {
       const container = document.getElementById(`condition-${type}`);
       const condition = conditions[type][index];
-      
+
       const row = document.createElement('div');
-      
+
       if (type === 'other') {
         row.className = 'other-condition-container';
         row.innerHTML = `
@@ -373,25 +739,18 @@
       } else {
         row.className = 'condition-row';
         row.innerHTML = `
-          <input type="text" 
-                 data-type="${type}" 
-                 data-index="${index}" 
-                 data-field="value" 
-                 value="${condition.value || ''}" 
-                 placeholder="値を入力"
-                 list="suggestions-${type}"
-                 autocomplete="off">
+          <input type="text" data-type="${type}" data-index="${index}" data-field="value" value="${condition.value || ''}" placeholder="値を入力">
           <select data-type="${type}" data-index="${index}" data-field="condition">
             ${conditionTypes.map(ct => `<option value="${ct.value}" ${condition.condition === ct.value ? 'selected' : ''}>${ct.label}</option>`).join('')}
           </select>
-          ${isMultiValueCondition(condition.condition) ? 
+          ${isMultiValueCondition(condition.condition) ?
             `<textarea data-type="${type}" data-index="${index}" data-field="values" placeholder="改行区切りで入力">${(condition.values || []).join('\n')}</textarea>` :
             ''
           }
           <button class="btn-remove" onclick="removeConditionRow('${type}', ${index})">削除</button>
         `;
       }
-      
+
       container.appendChild(row);
     }
 
@@ -401,13 +760,13 @@
 
     function addConditionRow(type) {
       if (!conditions[type]) conditions[type] = [];
-      
+
       if (type === 'other') {
         conditions[type].push({ visitCount: '0', referrer: '' });
       } else {
         conditions[type].push({ value: '', condition: 'exact', values: [] });
       }
-      
+
       renderConditionRow(type, conditions[type].length - 1);
     }
 
@@ -416,7 +775,7 @@
       const container = document.getElementById(`condition-${type}`);
       container.innerHTML = '';
       conditions[type].forEach((_, i) => renderConditionRow(type, i));
-      
+
       if (conditions[type].length === 0) {
         addConditionRow(type);
       }
@@ -438,13 +797,13 @@
         const type = e.target.dataset.type;
         const index = parseInt(e.target.dataset.index);
         const field = e.target.dataset.field;
-        
+
         if (field === 'values') {
           conditions[type][index][field] = e.target.value.split('\n').filter(v => v.trim());
         } else {
           conditions[type][index][field] = e.target.value;
         }
-        
+
         if (field === 'condition' && type !== 'other') {
           const container = document.getElementById(`condition-${type}`);
           container.innerHTML = '';
@@ -458,16 +817,16 @@
         const type = e.target.dataset.type;
         const index = parseInt(e.target.dataset.index);
         const field = e.target.dataset.field;
-        
+
         if (field === 'value') {
           conditions[type][index][field] = e.target.value;
         }
       }
-      
+
       if (e.target.dataset.creativeIndex !== undefined) {
         const index = parseInt(e.target.dataset.creativeIndex);
         const field = e.target.dataset.field;
-        
+
         if (field === 'isOriginal') {
           creatives[index][field] = e.target.checked;
           renderCreatives();
@@ -502,7 +861,7 @@
     function renderCreatives() {
       const container = document.getElementById('creatives-list');
       container.innerHTML = '';
-      
+
       creatives.forEach((creative, index) => {
         const row = document.createElement('div');
         row.className = 'creative-row';
@@ -524,10 +883,10 @@
             </div>
           </div>
           <div class="creative-col" style="justify-content: flex-end;">
-            ${creative.isOriginal ? 
-              '<div style="font-size: 12px; color: #6b7280; padding: 8px;">オリジナル</div>' : 
-              `<button class="btn-code" onclick="openCodeModal(${index})">コードを登録</button>`
-            }
+            ${creative.isOriginal ?
+            '<div style="font-size: 12px; color: #6b7280; padding: 8px;">オリジナル</div>' :
+            `<button class="btn-code" onclick="openCodeModal(${index})">コードを登録</button>`
+          }
           </div>
           <div class="creative-col" style="justify-content: flex-end;">
             <button class="btn-remove" onclick="removeCreative(${index})">削除</button>
@@ -567,19 +926,19 @@
     async function saveABTest() {
       const testName = document.getElementById('test-name').value.trim();
       const cvCode = document.getElementById('cv-code').value.trim();
-      
+
       if (!testName) {
         alert('テスト名を入力してください');
         document.getElementById('test-name').focus();
         return;
       }
-      
+
       if (!cvCode) {
         alert('CVコードを入力してください');
         document.getElementById('cv-code').focus();
         return;
       }
-      
+
       if (creatives.length === 0) {
         alert('最低1つのクリエイティブが必要です');
         return;
@@ -589,7 +948,7 @@
       const excludeUrl = document.getElementById('exclude-url').value.trim() || '';
       const startDate = document.getElementById('start-date').value || null;
       const endDate = document.getElementById('end-date').value || null;
-      
+
       // セッション期間を分に変換
       const sessionTime = document.getElementById('session-duration').value;
       const [hours, minutes] = sessionTime.split(':').map(Number);
@@ -642,12 +1001,8 @@
       location.href = `test_index.html?id=${projectId}`;
     }
 
-    async function init() {
-      await loadSuggestions();
-      await loadABTest();
-    }
-
-    init();
+    loadABTest();
   </script>
 </body>
+
 </html>
