@@ -82,6 +82,42 @@
 		return Date.now() < sessionData.expiresAt;
 	}
 
+	// ABテストインプレッションログ送信関数
+	async function logABTestImpression(abtestId, creativeIndex, creativeName, isOriginal) {
+		try {
+			const data = {
+				projectId: PROJECT_ID,
+				apiKey: API_KEY,
+				abtestId: abtestId,
+				userId: userId,
+				creativeIndex: creativeIndex,
+				creativeName: creativeName || '',
+				isOriginal: isOriginal || false,
+				url: window.location.href,
+				userAgent: navigator.userAgent,
+				language: navigator.language || 'unknown'
+			};
+
+			await fetch(`${SERVER_URL}/api/abtests/log-impression`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(data),
+				keepalive: true
+			});
+
+			if (isDebugMode) {
+				console.log('[ABTest] インプレッションログ送信:', {
+					abtestId,
+					creativeIndex,
+					creativeName,
+					isOriginal
+				});
+			}
+		} catch (err) {
+			console.error('[ABTest] インプレッションログ送信エラー:', err);
+		}
+	}
+
 	// トラッキング関数
 	window.trackerEvent = function (eventName, isExit = false) {
 		const data = {
@@ -150,6 +186,7 @@
 				// セッションチェック
 				const sessionData = getSessionData(result.abtestId);
 				let creative = null;
+				let isNewImpression = false;
 
 				if (sessionData && isSessionValid(sessionData)) {
 					// セッションが有効な場合は保存されたクリエイティブを使用
@@ -165,15 +202,27 @@
 					creative = result.creative;
 					const sessionDuration = result.sessionDuration || 720; // デフォルト12時間
 					setSessionData(result.abtestId, creative, sessionDuration);
+					isNewImpression = true; // 新しいインプレッションとしてマーク
 					
 					console.log('[ABTest] ✅ 新しいクリエイティブが適用されました:', {
 						テスト名: result.abtestName || 'N/A',
 						クリエイティブ名: creative.name || '(名称なし)',
+						クリエイティブインデックス: creative.index,
 						オリジナル: creative.isOriginal ? 'はい' : 'いいえ',
 						CSS: creative.css ? 'あり' : 'なし',
 						JavaScript: creative.javascript ? 'あり' : 'なし',
 						セッション期間: `${sessionDuration}分`
 					});
+				}
+
+				// 新しいインプレッションの場合のみログを記録
+				if (isNewImpression) {
+					await logABTestImpression(
+						result.abtestId,
+						creative.index,
+						creative.name,
+						creative.isOriginal
+					);
 				}
 
 				// オリジナルの場合は何もしない
