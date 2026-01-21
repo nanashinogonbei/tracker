@@ -91,7 +91,10 @@
       try {
         const res = await fetch(`${API_URL}/projects`);
         projects = await res.json();
-        renderProjectCheckboxes();
+        // アカウント情報を読み込んでいない場合のみレンダリング
+        if (!accountId) {
+          renderProjectCheckboxes();
+        }
       } catch (err) {
         console.error('Failed to load projects:', err);
         alert('プロジェクトの読み込みに失敗しました');
@@ -100,17 +103,22 @@
 
     function renderProjectCheckboxes() {
       const container = document.getElementById('project-checkboxes');
-      container.innerHTML = projects.map(project => `
+      
+      container.innerHTML = projects.map(project => {
+        const isChecked = selectedProjectIds.includes(project._id);
+        
+        return `
         <label class="flex items-center space-x-2 cursor-pointer">
           <input 
             type="checkbox" 
             class="project-checkbox w-4 h-4 text-blue-600 rounded" 
             data-project-id="${project._id}"
-            ${selectedProjectIds.includes(project._id) ? 'checked' : ''}
+            ${isChecked ? 'checked' : ''}
           >
           <span class="text-sm">${project.name}</span>
         </label>
-      `).join('');
+      `;
+      }).join('');
       
       updateAllProjectsCheckbox();
     }
@@ -124,10 +132,18 @@
         
         document.getElementById('account-id').value = account.accountId;
         document.getElementById('password').value = account.password;
-        document.getElementById('all-projects').checked = account.allProjects;
-        selectedProjectIds = account.permissionIds || [];
         
+        // permissionIdsが配列であることを確認
+        selectedProjectIds = Array.isArray(account.permissionIds) ? account.permissionIds : [];
+        
+        // selectedProjectIdsを設定してからレンダリング
         renderProjectCheckboxes();
+        
+        // 「全て」チェックボックスは renderProjectCheckboxes() の後に設定
+        // (updateAllProjectsCheckbox()で上書きされるのを防ぐため)
+        const allProjectsCheckbox = document.getElementById('all-projects');
+        allProjectsCheckbox.checked = account.allProjects;
+        
         updateProjectCheckboxesState();
       } catch (err) {
         console.error('Failed to load account:', err);
