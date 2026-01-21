@@ -12,7 +12,6 @@ app.set('trust proxy', true);
 // ミドルウェア
 app.use(cors());
 app.use(express.json({ type: '*/*' }));
-app.use(express.static('public'));
 
 // データベース接続
 connectDB();
@@ -23,12 +22,15 @@ const analyticsRoutes = require('./routes/analytics');
 const abtestRoutes = require('./routes/abtests');
 const trackerRoutes = require('./routes/tracker');
 
-// ルート設定
+// APIルート設定（静的ファイルの前に）
 app.use('/api/projects', projectRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/abtests', abtestRoutes);
 app.use('/tracker', trackerRoutes);
 app.post('/track', trackerRoutes);
+
+// 静的ファイルは最後に
+app.use(express.static('public'));
 
 // 特定のABテストとクリエイティブを取得するエンドポイント
 app.get('/api/abtests/:abtestId/creative/:creativeIndex', async (req, res) => {

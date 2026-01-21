@@ -119,50 +119,70 @@
     let eventRows = [];
 
     async function loadProject() {
-      const res = await fetch(`${API_URL}/projects`);
-      const projects = await res.json();
-      project = projects.find(p => p._id === projectId);
-      
-      document.getElementById('project-name').textContent = project.name;
-      document.getElementById('project-url').textContent = project.url;
+      try {
+        const res = await fetch(`${API_URL}/projects`);
+        const projects = await res.json();
+        project = projects.find(p => p._id === projectId);
+        
+        document.getElementById('project-name').textContent = project.name;
+        document.getElementById('project-url').textContent = project.url;
+      } catch (err) {
+        console.error('Failed to load project:', err);
+      }
     }
 
     async function loadSuggestions() {
-      const res = await fetch(`${API_URL}/suggestions`);
-      suggestionData = await res.json();
+      try {
+        const res = await fetch(`${API_URL}/analytics/suggestions`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        suggestionData = await res.json();
+        console.log('Suggestions loaded:', suggestionData);
+      } catch (err) {
+        console.error('Failed to load suggestions:', err);
+        suggestionData = { devices: [], browsers: [], oss: [], languages: [] };
+      }
     }
 
     async function loadAnalytics(keepDropdownOpen = false) {
-      const startDate = document.getElementById('start-date').value;
-      const endDate = document.getElementById('end-date').value;
-      
-      const params = new URLSearchParams({ start: startDate, end: endDate });
-      Object.entries(selectedFilters).forEach(([key, values]) => {
-        if (values.length > 0) params.set(key, values.join(','));
-      });
+      try {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        
+        const params = new URLSearchParams({ start: startDate, end: endDate });
+        Object.entries(selectedFilters).forEach(([key, values]) => {
+          if (values.length > 0) params.set(key, values.join(','));
+        });
 
-      const res = await fetch(`${API_URL}/analytics/${projectId}?${params}`);
-      analyticsData = await res.json();
-      
-      document.getElementById('unique-users').textContent = analyticsData.uniqueUsers;
-      document.getElementById('page-views').textContent = analyticsData.pageViews.toLocaleString();
-      
-      document.getElementById('popular-pages').innerHTML = analyticsData.popularPages
-        .slice(0, 3)
-        .map((page, idx) => `
-          <div class="popular-page">
-            <span>${idx + 1}. ${page.url}</span>
-            <span>${page.count}view</span>
-          </div>
-        `).join('');
+        const res = await fetch(`${API_URL}/analytics/${projectId}?${params}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        analyticsData = await res.json();
+        
+        document.getElementById('unique-users').textContent = analyticsData.uniqueUsers;
+        document.getElementById('page-views').textContent = analyticsData.pageViews.toLocaleString();
+        
+        document.getElementById('popular-pages').innerHTML = analyticsData.popularPages
+          .slice(0, 3)
+          .map((page, idx) => `
+            <div class="popular-page">
+              <span>${idx + 1}. ${page.url}</span>
+              <span>${page.count}view</span>
+            </div>
+          `).join('');
 
-      if (keepDropdownOpen) {
-        updateFilterButtons();
-      } else {
-        renderFilters();
+        if (keepDropdownOpen) {
+          updateFilterButtons();
+        } else {
+          renderFilters();
+        }
+        
+        eventRows.forEach((_, idx) => loadEventCount(idx));
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
       }
-      
-      eventRows.forEach((_, idx) => loadEventCount(idx));
     }
     
     function updateFilterButtons() {
@@ -181,7 +201,6 @@
     function renderFilters() {
       const filtersContainer = document.getElementById('filters');
       
-      // 既存のドロップダウンの表示状態を保存
       const openDropdowns = [];
       document.querySelectorAll('.filter-dropdown.show').forEach(dd => {
         openDropdowns.push(dd.dataset.filterKey);
@@ -209,12 +228,10 @@
         dropdown.className = 'filter-dropdown';
         dropdown.dataset.filterKey = filter.key;
         
-        // 以前開いていた場合は再度開く
         if (openDropdowns.includes(filter.key)) {
           dropdown.classList.add('show');
         }
         
-        // 検索ボックスを追加
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'filter-search';
@@ -277,7 +294,6 @@
       const dropdown = document.querySelector(`.filter-dropdown[data-filter-key="${key}"]`);
       dropdown.classList.toggle('show');
       
-      // ドロップダウンを開いたときに検索ボックスをクリア
       if (dropdown.classList.contains('show')) {
         const searchInput = dropdown.querySelector('.filter-search');
         searchInput.value = '';
@@ -353,24 +369,31 @@
     }
 
     async function loadEventCount(rowId) {
-      const selectEl = document.getElementById(`event-select-${rowId}`);
-      const event = selectEl.value;
-      eventRows[rowId].event = event;
-      
-      if (!event) {
-        eventRows[rowId].count = null;
-        document.getElementById(`event-count-${rowId}`).textContent = '';
-        return;
+      try {
+        const selectEl = document.getElementById(`event-select-${rowId}`);
+        const event = selectEl.value;
+        eventRows[rowId].event = event;
+        
+        if (!event) {
+          eventRows[rowId].count = null;
+          document.getElementById(`event-count-${rowId}`).textContent = '';
+          return;
+        }
+
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const params = new URLSearchParams({ start: startDate, end: endDate, event });
+
+        const res = await fetch(`${API_URL}/analytics/${projectId}/event-count?${params}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        eventRows[rowId].count = data.count;
+        document.getElementById(`event-count-${rowId}`).textContent = data.count;
+      } catch (err) {
+        console.error('Failed to load event count:', err);
       }
-
-      const startDate = document.getElementById('start-date').value;
-      const endDate = document.getElementById('end-date').value;
-      const params = new URLSearchParams({ start: startDate, end: endDate, event });
-
-      const res = await fetch(`${API_URL}/analytics/${projectId}/event-count?${params}`);
-      const data = await res.json();
-      eventRows[rowId].count = data.count;
-      document.getElementById(`event-count-${rowId}`).textContent = data.count;
     }
 
     function getJSTDateString(date) {
