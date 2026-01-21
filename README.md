@@ -1,7 +1,6 @@
 ﻿# tracker
 
 ## トラッキング機能
-```
 https://example.com/page1
 → トラッキングされる
 
@@ -19,7 +18,6 @@ https://example.com/page1?gh_id=[String]&gh_creative=[num]
 **gh_void + gh_id, gh_creative**
 https://example.com/page1?gh_void=[num]&gh_id=[String]&gh_creative=[num]
 → Stringとnumで指定したABテストのクリエイティブを実行する、アクセス解析とABテストを記録しない
-```
 
 ## デバック機能
 ```
