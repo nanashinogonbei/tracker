@@ -13,136 +13,168 @@
         <div class="mt-4 space-y-1">
           <div class="px-4 py-2 text-sm"><a href="./admin.html">プロジェクト管理</a></div>
           <div class="px-4 py-2 text-sm text-gray-500"><a href="./account_index.html">アカウント管理</a></div>
-          <div class="px-4 py-2 text-sm"><a href="#" id="logout-btn" class="text-red-600 hover:text-red-800">ログアウト</a>
+          <div class="px-4 py-2 text-sm"><a href="#" id="logout-btn" class="text-red-600 hover:text-red-800">ログアウト</a></div>
         </div>
       </div>
     </aside>
 
-    <main class="flex-1 p-8">
-      <div class="header">
-        <div class="header-left">
-          <input type="text" id="test-name" placeholder="テスト名を入力" value="">
-          <div class="toggle-container">
-            <span class="toggle-label" id="toggle-label">OFF</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="test-active">
-              <span class="toggle-bg"></span>
-              <span class="toggle-handle"></span>
+    <main class="flex-1 p-8 max-w-6xl">
+      <div class="flex justify-between items-center mb-8">
+        <div class="flex items-center gap-4">
+          <input type="text" id="test-name" placeholder="テスト名を入力" 
+                 class="text-2xl font-bold px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium" id="toggle-label">OFF</span>
+            <label class="relative inline-block w-14 h-8 cursor-pointer">
+              <input type="checkbox" id="test-active" class="sr-only">
+              <span class="absolute inset-0 bg-gray-300 rounded-full transition-colors" id="toggle-bg"></span>
+              <span class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-transform" id="toggle-handle"></span>
             </label>
           </div>
         </div>
-        <a href="#" onclick="goBack(); return false;" style="color: #3b82f6; font-size: 14px; text-decoration: none;">戻る</a>
+        <a href="#" onclick="goBack(); return false;" class="text-blue-500 text-sm hover:underline">戻る</a>
       </div>
 
-      <div class="section">
-        <div class="form-group">
-          <label class="form-label">このテストのCVコード</label>
-          <input type="text" id="cv-code" class="form-input" placeholder="例: purchase_complete">
+      <div class="bg-white rounded-lg shadow p-6 mb-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">このテストのCVコード</label>
+          <input type="text" id="cv-code" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="例: purchase_complete">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">対象URL</label>
-          <input type="text" id="target-url" class="form-input" placeholder="http://www.sample.com/hoge/hoge.html">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">対象URL</label>
+          <input type="text" id="target-url" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="http://www.sample.com/hoge/hoge.html">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">除外URL</label>
-          <input type="text" id="exclude-url" class="form-input" placeholder="http://www.sample.com/hoge/form[\d\d][4-8]).html">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">除外URL</label>
+          <input type="text" id="exclude-url" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="http://www.sample.com/hoge/form[\d\d][4-8]).html">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">期間</label>
-          <div class="form-row">
-            <input type="date" id="start-date" class="form-input">
-            <span class="date-separator">〜</span>
-            <input type="date" id="end-date" class="form-input">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">期間</label>
+          <div class="flex items-center gap-3">
+            <input type="date" id="start-date" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <span class="text-gray-500">〜</span>
+            <input type="date" id="end-date" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">セッション期間</label>
-          <input type="time" id="session-duration" class="time-input" value="12:00">
-          <span style="margin-left: 8px; font-size: 14px; color: #6b7280;">（セッション中は同じクリエイティブを表示）</span>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">セッション期間</label>
+          <div class="flex items-center gap-2">
+            <input type="time" id="session-duration" value="12:00" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <span class="text-sm text-gray-500">（セッション中は同じクリエイティブを表示）</span>
+          </div>
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">実行条件</div>
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="text-lg font-medium text-gray-900 mb-4">実行条件</div>
         
-        <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('device')">
-            <span>デバイス</span>
+        <div class="space-y-4">
+          <div class="border border-gray-200 rounded-lg">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('device')">
+              <span>デバイス</span>
+              <svg class="w-5 h-5 transform transition-transform" id="device-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="px-4 pb-4 space-y-2" id="condition-device"></div>
+            <div class="px-4 pb-4">
+              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('device')">+ 条件を追加</button>
+            </div>
           </div>
-          <div class="condition-content show" id="condition-device"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('device')">+</button>
-        </div>
 
-        <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('language')">
-            <span>言語</span>
+          <div class="border border-gray-200 rounded-lg">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('language')">
+              <span>言語</span>
+              <svg class="w-5 h-5 transform transition-transform" id="language-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="px-4 pb-4 space-y-2" id="condition-language"></div>
+            <div class="px-4 pb-4">
+              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('language')">+ 条件を追加</button>
+            </div>
           </div>
-          <div class="condition-content show" id="condition-language"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('language')">+</button>
-        </div>
 
-        <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('os')">
-            <span>OS</span>
+          <div class="border border-gray-200 rounded-lg">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('os')">
+              <span>OS</span>
+              <svg class="w-5 h-5 transform transition-transform" id="os-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="px-4 pb-4 space-y-2" id="condition-os"></div>
+            <div class="px-4 pb-4">
+              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('os')">+ 条件を追加</button>
+            </div>
           </div>
-          <div class="condition-content show" id="condition-os"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('os')">+</button>
-        </div>
 
-        <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('browser')">
-            <span>ブラウザ</span>
+          <div class="border border-gray-200 rounded-lg">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('browser')">
+              <span>ブラウザ</span>
+              <svg class="w-5 h-5 transform transition-transform" id="browser-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="px-4 pb-4 space-y-2" id="condition-browser"></div>
+            <div class="px-4 pb-4">
+              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('browser')">+ 条件を追加</button>
+            </div>
           </div>
-          <div class="condition-content show" id="condition-browser"></div>
-          <button class="btn-add-condition" onclick="addConditionRow('browser')">+</button>
-        </div>
 
-        <div class="condition-group">
-          <div class="condition-header" onclick="toggleCondition('other')">
-            <span>その他</span>
+          <div class="border border-gray-200 rounded-lg">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('other')">
+              <span>その他</span>
+              <svg class="w-5 h-5 transform transition-transform" id="other-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="px-4 pb-4" id="condition-other"></div>
           </div>
-          <div class="condition-content show" id="condition-other"></div>
         </div>
       </div>
 
-      <div class="creative-section">
-        <div class="section-title">クリエイティブ</div>
-        <div style="margin-bottom: 12px; font-size: 14px; color: #6b7280;">
-          合計実行回数: <span id="total-impressions">1000</span>回
-          CV: <span id="total-cv">100</span>
-          CVR: <span id="total-cvr">10</span>%
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="text-lg font-medium text-gray-900 mb-3">クリエイティブ</div>
+        <div class="text-sm text-gray-600 mb-4">
+          合計実行回数: <span id="total-impressions" class="font-semibold">1000</span>回
+          CV: <span id="total-cv" class="font-semibold">100</span>
+          CVR: <span id="total-cvr" class="font-semibold">10</span>%
         </div>
-        <div id="creatives-list"></div>
-        <button class="btn-add" onclick="addCreative()">+</button>
+        <div id="creatives-list" class="space-y-4"></div>
+        <button class="mt-4 w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-600 text-xl" onclick="addCreative()">+</button>
       </div>
 
-      <div style="display: flex; justify-content: center; gap: 16px; margin-top: 32px;">
-        <button class="btn-save" onclick="saveABTest()">このテストを保存する</button>
+      <div class="flex justify-center">
+        <button class="bg-blue-500 text-white px-8 py-3 rounded-md hover:bg-blue-600 font-medium" onclick="saveABTest()">このテストを保存する</button>
       </div>
     </main>
   </div>
 
-  <div id="code-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">コードを登録</div>
+  <div id="code-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-gray-200">
+        <h3 class="text-xl font-bold text-gray-900">コードを登録</h3>
+      </div>
       
-      <div class="modal-section">
-        <div class="modal-section-title">CSS</div>
-        <textarea id="modal-css" class="code-editor" placeholder=".hoge {&#10;  width: 100px;&#10;}"></textarea>
+      <div class="p-6 space-y-6">
+        <div>
+          <div class="text-sm font-medium text-gray-700 mb-2">CSS</div>
+          <textarea id="modal-css" class="w-full h-48 px-4 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder=".hoge {&#10;  width: 100px;&#10;}"></textarea>
+        </div>
+
+        <div>
+          <div class="text-sm font-medium text-gray-700 mb-2">JavaScript</div>
+          <textarea id="modal-js" class="w-full h-48 px-4 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="const listsContainer = document.getElementById('lists-container');&#10;const addListBtn = document.getElementById('addList');"></textarea>
+        </div>
       </div>
 
-      <div class="modal-section">
-        <div class="modal-section-title">JavaScript</div>
-        <textarea id="modal-js" class="code-editor" placeholder="const listsContainer = document.getElementById('lists-container');&#10;const addListBtn = document.getElementById('addList');"></textarea>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-modal-save" onclick="saveCode()">登録する</button>
-        <button class="btn-modal-cancel" onclick="closeModal()">キャンセル</button>
+      <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+        <button class="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" onclick="closeModal()">キャンセル</button>
+        <button class="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600" onclick="saveCode()">登録する</button>
       </div>
     </div>
   </div>
@@ -174,6 +206,25 @@
       { value: 'notOneOf', label: '次のいずれでもない' }
     ];
 
+    // トグルスイッチの動作
+    document.getElementById('test-active').addEventListener('change', (e) => {
+      const label = document.getElementById('toggle-label');
+      const bg = document.getElementById('toggle-bg');
+      const handle = document.getElementById('toggle-handle');
+      
+      if (e.target.checked) {
+        label.textContent = 'ON';
+        bg.classList.add('bg-green-500');
+        bg.classList.remove('bg-gray-300');
+        handle.classList.add('translate-x-6');
+      } else {
+        label.textContent = 'OFF';
+        bg.classList.remove('bg-green-500');
+        bg.classList.add('bg-gray-300');
+        handle.classList.remove('translate-x-6');
+      }
+    });
+
     async function loadABTest() {
       if (!abtestId) {
         document.getElementById('test-name').value = '';
@@ -188,8 +239,11 @@
         currentABTest = await res.json();
         
         document.getElementById('test-name').value = currentABTest.name || '';
-        document.getElementById('test-active').checked = currentABTest.active || false;
-        document.getElementById('toggle-label').textContent = currentABTest.active ? 'ON' : 'OFF';
+        
+        const activeCheckbox = document.getElementById('test-active');
+        activeCheckbox.checked = currentABTest.active || false;
+        activeCheckbox.dispatchEvent(new Event('change'));
+        
         document.getElementById('cv-code').value = currentABTest.cvCode || '';
         document.getElementById('target-url').value = currentABTest.targetUrl || '';
         document.getElementById('exclude-url').value = currentABTest.excludeUrl || '';
@@ -317,22 +371,26 @@
       const row = document.createElement('div');
       
       if (type === 'other') {
-        row.className = 'other-condition-container';
+        row.className = 'flex items-center gap-3';
         row.innerHTML = `
-          <div class="other-condition-left">
-            <span class="other-condition-label">訪問回数</span>
-            <input type="number" class="other-condition-number" data-type="${type}" data-index="${index}" data-field="visitCount" value="${condition.visitCount || '0'}" min="0">
-            <span class="other-condition-label">以上</span>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-700">訪問回数</span>
+            <input type="number" class="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                   data-type="${type}" data-index="${index}" data-field="visitCount" value="${condition.visitCount || '0'}" min="0">
+            <span class="text-sm text-gray-700">以上</span>
           </div>
-          <div class="other-condition-right">
-            <span class="other-condition-label">リファラーURL</span>
-            <input type="text" class="other-condition-url" data-type="${type}" data-index="${index}" data-field="referrer" value="${condition.referrer || ''}" placeholder="例) /^https?:\/\/(www\.)?example\.com\/horse\/123$/i">
+          <div class="flex-1 flex items-center gap-2">
+            <span class="text-sm text-gray-700">リファラーURL</span>
+            <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                   data-type="${type}" data-index="${index}" data-field="referrer" value="${condition.referrer || ''}" 
+                   placeholder="例) /^https?:\/\/(www\.)?example\.com\/horse\/123$/i">
           </div>
         `;
       } else {
-        row.className = 'condition-row';
+        row.className = 'flex items-center gap-3';
         row.innerHTML = `
           <input type="text" 
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 data-type="${type}" 
                 data-index="${index}" 
                 data-field="value" 
@@ -340,14 +398,18 @@
                 placeholder="値を入力"
                 list="suggestions-${type}"
                 autocomplete="off">
-          <select data-type="${type}" data-index="${index}" data-field="condition">
+          <select class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  data-type="${type}" data-index="${index}" data-field="condition">
             ${conditionTypes.map(ct => `<option value="${ct.value}" ${condition.condition === ct.value ? 'selected' : ''}>${ct.label}</option>`).join('')}
           </select>
           ${isMultiValueCondition(condition.condition) ? 
-            `<textarea data-type="${type}" data-index="${index}" data-field="values" placeholder="改行区切りで入力">${(condition.values || []).join('\n')}</textarea>` :
+            `<textarea class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                      data-type="${type}" data-index="${index}" data-field="values" 
+                      placeholder="改行区切りで入力" rows="3">${(condition.values || []).join('\n')}</textarea>` :
             ''
           }
-          <button class="btn-remove" onclick="removeConditionRow('${type}', ${index})">削除</button>
+          <button class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm" 
+                  onclick="removeConditionRow('${type}', ${index})">削除</button>
         `;
       }
       
@@ -383,14 +445,16 @@
 
     function toggleCondition(type) {
       const content = document.getElementById(`condition-${type}`);
-      const header = content.previousElementSibling;
-      content.classList.toggle('show');
-      header.classList.toggle('collapsed');
+      const arrow = document.getElementById(`${type}-arrow`);
+      
+      if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        arrow.classList.remove('rotate-180');
+      } else {
+        content.classList.add('hidden');
+        arrow.classList.add('rotate-180');
+      }
     }
-
-    document.getElementById('test-active').addEventListener('change', (e) => {
-      document.getElementById('toggle-label').textContent = e.target.checked ? 'ON' : 'OFF';
-    });
 
     document.addEventListener('change', (e) => {
       if (e.target.dataset.type && e.target.dataset.index !== undefined) {
@@ -410,6 +474,20 @@
           conditions[type].forEach((_, i) => renderConditionRow(type, i));
         }
       }
+      
+      if (e.target.dataset.creativeIndex !== undefined) {
+        const index = parseInt(e.target.dataset.creativeIndex);
+        const field = e.target.dataset.field;
+        
+        if (field === 'isOriginal') {
+          creatives[index][field] = e.target.checked;
+          renderCreatives();
+        } else if (field === 'distribution') {
+          creatives[index][field] = parseFloat(e.target.value) || 0;
+        } else {
+          creatives[index][field] = e.target.value;
+        }
+      }
     });
 
     document.addEventListener('input', (e) => {
@@ -427,12 +505,9 @@
         const index = parseInt(e.target.dataset.creativeIndex);
         const field = e.target.dataset.field;
         
-        if (field === 'isOriginal') {
-          creatives[index][field] = e.target.checked;
-          renderCreatives();
-        } else if (field === 'distribution') {
+        if (field === 'distribution') {
           creatives[index][field] = parseFloat(e.target.value) || 0;
-        } else {
+        } else if (field !== 'isOriginal') {
           creatives[index][field] = e.target.value;
         }
       }
@@ -464,7 +539,7 @@
       
       creatives.forEach((creative, index) => {
         let statsHtml = `
-          <div class="creative-stats">
+          <div class="text-sm text-gray-600">
             <div>-</div>
             <div>CV: -</div>
             <div>CVR: -</div>
@@ -474,7 +549,7 @@
         if (statsData && statsData.stats && statsData.stats[index]) {
           const stat = statsData.stats[index];
           statsHtml = `
-            <div class="creative-stats">
+            <div class="text-sm text-gray-600">
               <div>${stat.impressions.toLocaleString()}回</div>
               <div>CV: ${stat.conversions.toLocaleString()}</div>
               <div>CVR: ${stat.cvr.toFixed(3)}%</div>
@@ -483,34 +558,43 @@
         }
         
         const row = document.createElement('div');
-        row.className = 'creative-row';
+        row.className = 'border border-gray-200 rounded-lg p-4';
         row.innerHTML = `
-          <div class="creative-col">
-            <label>名称</label>
-            <input type="text" value="${creative.name || ''}" data-creative-index="${index}" data-field="name" placeholder="${creative.isOriginal ? 'オリジナル' : '名称'}">
-          </div>
-          <div class="creative-col">
-            <label>配分</label>
-            <input type="number" value="${creative.distribution || 0}" data-creative-index="${index}" data-field="distribution" min="0" max="100">%
-          </div>
-          <div class="creative-col">
-            <label>合計実行回数</label>
-            ${statsHtml}
-          </div>
-          <div class="creative-col" style="justify-content: flex-end;">
-            ${creative.isOriginal ? 
-              '<div style="font-size: 12px; color: #6b7280; padding: 8px;">オリジナル</div>' : 
-              `<button class="btn-code" onclick="openCodeModal(${index})">コードを登録</button>`
-            }
-          </div>
-          <div class="creative-col" style="justify-content: flex-end;">
-            <button class="btn-remove" onclick="removeCreative(${index})">削除</button>
-          </div>
-          <div class="creative-col" style="justify-content: flex-end;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="checkbox" ${creative.isOriginal ? 'checked' : ''} data-creative-index="${index}" data-field="isOriginal">
-              <span style="font-size: 13px;">オリジナルを選択</span>
-            </label>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
+              <input type="text" value="${creative.name || ''}" 
+                     data-creative-index="${index}" data-field="name" 
+                     placeholder="${creative.isOriginal ? 'オリジナル' : '名称'}"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">配分</label>
+              <div class="flex items-center gap-2">
+                <input type="number" value="${creative.distribution || 0}" 
+                       data-creative-index="${index}" data-field="distribution" 
+                       min="0" max="100"
+                       class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="text-gray-700">%</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">合計実行回数</label>
+              ${statsHtml}
+            </div>
+            <div class="flex flex-col gap-2">
+              ${creative.isOriginal ? 
+                '<div class="text-sm text-gray-500 py-2">オリジナル</div>' : 
+                `<button class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm" onclick="openCodeModal(${index})">コードを登録</button>`
+              }
+              <button class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm" onclick="removeCreative(${index})">削除</button>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" ${creative.isOriginal ? 'checked' : ''} 
+                       data-creative-index="${index}" data-field="isOriginal"
+                       class="w-4 h-4 text-blue-600 rounded">
+                <span class="text-sm text-gray-700">オリジナルを選択</span>
+              </label>
+            </div>
           </div>
         `;
         container.appendChild(row);
@@ -522,11 +606,13 @@
       const creative = creatives[index];
       document.getElementById('modal-css').value = creative.css || '';
       document.getElementById('modal-js').value = creative.javascript || '';
-      document.getElementById('code-modal').classList.add('show');
+      document.getElementById('code-modal').classList.remove('hidden');
+      document.getElementById('code-modal').classList.add('flex');
     }
 
     function closeModal() {
-      document.getElementById('code-modal').classList.remove('show');
+      document.getElementById('code-modal').classList.add('hidden');
+      document.getElementById('code-modal').classList.remove('flex');
       currentCreativeIndex = -1;
     }
 
@@ -614,7 +700,6 @@
       location.href = `test_index.html?id=${projectId}`;
     }
 
-    // ログイン機能
     if (sessionStorage.getItem('loggedIn') !== 'true') {
       window.location.href = 'index.html';
     }

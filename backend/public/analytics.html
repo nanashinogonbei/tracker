@@ -13,53 +13,55 @@
         <div class="mt-4 space-y-1">
           <div class="px-4 py-2 text-sm"><a href="./admin.html">プロジェクト管理</a></div>
           <div class="px-4 py-2 text-sm text-gray-500"><a href="./account_index.html">アカウント管理</a></div>
-          <div class="px-4 py-2 text-sm"><a href="#" id="logout-btn" class="text-red-600 hover:text-red-800">ログアウト</a>
+          <div class="px-4 py-2 text-sm"><a href="#" id="logout-btn" class="text-red-600 hover:text-red-800">ログアウト</a></div>
         </div>
       </div>
     </aside>
 
     <main class="flex-1 p-8">
-      <div class="header">
+      <div class="flex justify-between items-center mb-8">
         <div>
-          <h1 id="project-name">読み込み中...</h1>
-          <p id="project-url"></p>
+          <h1 id="project-name" class="text-2xl font-bold">読み込み中...</h1>
+          <p id="project-url" class="text-sm text-gray-600"></p>
         </div>
-        <a href="admin.html">戻る</a>
+        <a href="admin.html" class="text-blue-500 text-sm hover:underline">戻る</a>
       </div>
 
-      <div class="section">
-        <div class="section-title">期間</div>
-        <div class="date-range">
-          <input type="date" id="start-date">
-          <span>〜</span>
-          <input type="date" id="end-date">
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">フィルター</div>
-        <div class="filters" id="filters"></div>
-      </div>
-
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-label">ユニークユーザー</div>
-          <div class="stat-value" id="unique-users">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">ページビュー</div>
-          <div class="stat-value" id="page-views">-</div>
-        </div>
-        <div class="stat-card white">
-          <div class="stat-label">人気ページ</div>
-          <div id="popular-pages"></div>
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="text-sm font-medium text-gray-700 mb-3">期間</div>
+        <div class="flex items-center gap-3">
+          <input type="date" id="start-date" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <span class="text-gray-500">〜</span>
+          <input type="date" id="end-date" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
       </div>
 
-      <div class="events-card">
-        <div class="section-title">イベント</div>
-        <div id="event-rows"></div>
-        <button class="add-btn" id="add-event-btn">+</button>
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="text-sm font-medium text-gray-700 mb-3">フィルター</div>
+        <div class="flex flex-wrap gap-3" id="filters"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="text-sm font-medium text-gray-500 mb-2">ユニークユーザー</div>
+          <div class="text-3xl font-bold text-gray-900" id="unique-users">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="text-sm font-medium text-gray-500 mb-2">ページビュー</div>
+          <div class="text-3xl font-bold text-gray-900" id="page-views">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="text-sm font-medium text-gray-500 mb-2">人気ページ</div>
+          <div id="popular-pages" class="space-y-2 text-sm"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+          <div class="text-sm font-medium text-gray-700">イベント</div>
+          <button id="add-event-btn" class="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-600 text-xl">+</button>
+        </div>
+        <div id="event-rows" class="space-y-3"></div>
       </div>
     </main>
   </div>
@@ -123,9 +125,9 @@
         document.getElementById('popular-pages').innerHTML = analyticsData.popularPages
           .slice(0, 3)
           .map((page, idx) => `
-            <div class="popular-page">
-              <span>${idx + 1}. ${page.url}</span>
-              <span>${page.count}view</span>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-700">${idx + 1}. ${page.url}</span>
+              <span class="text-gray-500">${page.count}view</span>
             </div>
           `).join('');
 
@@ -142,13 +144,14 @@
     }
     
     function updateFilterButtons() {
-      document.querySelectorAll('.filter').forEach(filterDiv => {
-        const btn = filterDiv.querySelector('.filter-btn');
-        const dropdown = filterDiv.querySelector('.filter-dropdown');
-        const key = dropdown.dataset.filterKey;
+      document.querySelectorAll('[data-filter-key]').forEach(btn => {
+        const key = btn.dataset.filterKey;
         const hasSelected = selectedFilters[key].length > 0;
         
-        btn.className = 'filter-btn' + (hasSelected ? ' active' : '');
+        btn.className = hasSelected 
+          ? 'px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600'
+          : 'px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50';
+        
         const labels = { device: 'デバイス', browser: 'ブラウザ', os: 'OS', language: '言語' };
         btn.textContent = labels[key] + (hasSelected ? ' ✓' : '');
       });
@@ -158,8 +161,10 @@
       const filtersContainer = document.getElementById('filters');
       
       const openDropdowns = [];
-      document.querySelectorAll('.filter-dropdown.show').forEach(dd => {
-        openDropdowns.push(dd.dataset.filterKey);
+      document.querySelectorAll('.dropdown-content').forEach(dd => {
+        if (!dd.classList.contains('hidden')) {
+          openDropdowns.push(dd.dataset.filterKey);
+        }
       });
       
       filtersContainer.innerHTML = '';
@@ -170,41 +175,48 @@
         { label: 'OS', key: 'os', options: suggestionData.oss },
         { label: '言語', key: 'language', options: suggestionData.languages }
       ].forEach(filter => {
-        const filterDiv = document.createElement('div');
-        filterDiv.className = 'filter';
-        
         const hasSelected = selectedFilters[filter.key].length > 0;
         
+        const filterDiv = document.createElement('div');
+        filterDiv.className = 'relative';
+        
         const btn = document.createElement('button');
-        btn.className = 'filter-btn' + (hasSelected ? ' active' : '');
+        btn.dataset.filterKey = filter.key;
+        btn.className = hasSelected 
+          ? 'px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600'
+          : 'px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50';
         btn.textContent = filter.label + (hasSelected ? ' ✓' : '');
         btn.onclick = () => toggleFilter(filter.key);
         
         const dropdown = document.createElement('div');
-        dropdown.className = 'filter-dropdown';
+        dropdown.className = 'dropdown-content absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10 hidden';
         dropdown.dataset.filterKey = filter.key;
         
         if (openDropdowns.includes(filter.key)) {
-          dropdown.classList.add('show');
+          dropdown.classList.remove('hidden');
         }
         
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
-        searchInput.className = 'filter-search';
+        searchInput.className = 'w-full px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500';
         searchInput.placeholder = `${filter.label}を検索...`;
         searchInput.onclick = (e) => e.stopPropagation();
         searchInput.oninput = (e) => filterOptions(filter.key, e.target.value);
         dropdown.appendChild(searchInput);
         
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'max-h-48 overflow-y-auto p-2';
+        
         filter.options.forEach(opt => {
           const label = document.createElement('label');
-          label.className = 'filter-option';
+          label.className = 'flex items-center px-2 py-2 hover:bg-gray-50 rounded cursor-pointer';
           label.dataset.value = opt.toLowerCase();
           
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.value = opt;
           checkbox.checked = selectedFilters[filter.key].includes(opt);
+          checkbox.className = 'w-4 h-4 text-blue-600 rounded mr-2';
           checkbox.onchange = (e) => {
             e.stopPropagation();
             updateFilter(filter.key, opt, checkbox.checked);
@@ -212,15 +224,17 @@
           
           const span = document.createElement('span');
           span.textContent = opt;
-          span.style.fontSize = '14px';
+          span.className = 'text-sm text-gray-700';
           
           label.appendChild(checkbox);
           label.appendChild(span);
-          dropdown.appendChild(label);
+          optionsContainer.appendChild(label);
         });
         
+        dropdown.appendChild(optionsContainer);
+        
         const closeBtn = document.createElement('button');
-        closeBtn.className = 'filter-close';
+        closeBtn.className = 'w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-50 border-t border-gray-200';
         closeBtn.textContent = '閉じる';
         closeBtn.onclick = () => closeFilter(filter.key);
         dropdown.appendChild(closeBtn);
@@ -232,8 +246,8 @@
     }
 
     function filterOptions(key, searchText) {
-      const dropdown = document.querySelector(`.filter-dropdown[data-filter-key="${key}"]`);
-      const options = dropdown.querySelectorAll('.filter-option');
+      const dropdown = document.querySelector(`.dropdown-content[data-filter-key="${key}"]`);
+      const options = dropdown.querySelectorAll('label');
       const search = searchText.toLowerCase();
       
       options.forEach(option => {
@@ -247,18 +261,18 @@
     }
 
     function toggleFilter(key) {
-      const dropdown = document.querySelector(`.filter-dropdown[data-filter-key="${key}"]`);
-      dropdown.classList.toggle('show');
+      const dropdown = document.querySelector(`.dropdown-content[data-filter-key="${key}"]`);
+      dropdown.classList.toggle('hidden');
       
-      if (dropdown.classList.contains('show')) {
-        const searchInput = dropdown.querySelector('.filter-search');
+      if (!dropdown.classList.contains('hidden')) {
+        const searchInput = dropdown.querySelector('input[type="text"]');
         searchInput.value = '';
         filterOptions(key, '');
       }
     }
 
     function closeFilter(key) {
-      document.querySelector(`.filter-dropdown[data-filter-key="${key}"]`).classList.remove('show');
+      document.querySelector(`.dropdown-content[data-filter-key="${key}"]`).classList.add('hidden');
     }
 
     function updateFilter(key, value, checked) {
@@ -286,10 +300,11 @@
       
       eventRows.forEach((row, idx) => {
         const rowDiv = document.createElement('div');
-        rowDiv.className = 'event-row';
+        rowDiv.className = 'flex items-center gap-3';
         
         const select = document.createElement('select');
         select.id = `event-select-${idx}`;
+        select.className = 'flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500';
         
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -310,10 +325,11 @@
         
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '削除';
+        deleteBtn.className = 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm';
         deleteBtn.onclick = () => removeEventRow(idx);
         
         const countDiv = document.createElement('div');
-        countDiv.className = 'event-count';
+        countDiv.className = 'w-24 text-right font-medium text-gray-900';
         countDiv.id = `event-count-${idx}`;
         countDiv.textContent = row.count !== null ? row.count : '';
         
@@ -368,7 +384,6 @@
       document.getElementById('end-date').value = getJSTDateString(jstNow);
     }
 
-    // ログイン機能
     if (sessionStorage.getItem('loggedIn') !== 'true') {
       window.location.href = 'index.html';
     }
