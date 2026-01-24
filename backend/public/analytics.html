@@ -275,13 +275,63 @@
       document.querySelector(`.dropdown-content[data-filter-key="${key}"]`).classList.add('hidden');
     }
 
-    function updateFilter(key, value, checked) {
+    function updateFilterValue(key, value, checked) {
       if (checked) {
         selectedFilters[key].push(value);
       } else {
         selectedFilters[key] = selectedFilters[key].filter(v => v !== value);
       }
-      loadAnalytics(true);
+      
+      // ボタンの表示を更新
+      const btn = document.querySelector(`[data-filter-key="${key}"]`);
+      const hasSelected = selectedFilters[key].length > 0;
+      const labels = { device: 'デバイス', browser: 'ブラウザ', os: 'OS', language: '言語' };
+      
+      btn.className = hasSelected 
+        ? 'px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600'
+        : 'px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50';
+      btn.textContent = labels[key] + (hasSelected ? ' ✓' : '');
+      
+      // データを再読み込み
+      loadAnalyticsData();
+    }
+
+    async function loadAnalyticsData() {
+      try {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        
+        const params = new URLSearchParams({ start: startDate, end: endDate });
+        Object.entries(selectedFilters).forEach(([key, values]) => {
+          if (values.length > 0) params.set(key, values.join(','));
+        });
+
+        const res = await fetch(`${API_URL}/analytics/${projectId}?${params}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        analyticsData = await res.json();
+        
+        document.getElementById('unique-users').textContent = analyticsData.uniqueUsers;
+        document.getElementById('page-views').textContent = analyticsData.pageViews.toLocaleString();
+        
+        document.getElementById('popular-pages').innerHTML = analyticsData.popularPages
+          .slice(0, 3)
+          .map((page, idx) => `
+            <div class="flex justify-between items-center">
+              <span class="text-gray-700">${idx + 1}. ${page.url}</span>
+              <span class="text-gray-500">${page.count}view</span>
+            </div>
+          `).join('');
+        
+        eventRows.forEach((_, idx) => loadEventCount(idx));
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+      }
+    }
+
+    function updateFilter(key, value, checked) {
+      updateFilterValue(key, value, checked);
     }
 
     function addEventRow() {

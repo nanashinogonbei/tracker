@@ -29,7 +29,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/abtests', abtestRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/tracker', trackerRoutes);
-app.post('/track', trackerRoutes);
+app.use('/track', trackerRoutes);
 
 // 静的ファイルは最後に
 app.use(express.static('public'));

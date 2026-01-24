@@ -206,7 +206,6 @@
       { value: 'notOneOf', label: '次のいずれでもない' }
     ];
 
-    // トグルスイッチの動作
     document.getElementById('test-active').addEventListener('change', (e) => {
       const label = document.getElementById('toggle-label');
       const bg = document.getElementById('toggle-bg');
@@ -277,7 +276,7 @@
 
     async function loadSuggestions() {
       try {
-        const res = await fetch(`${API_URL}/suggestions`);
+        const res = await fetch(`${API_URL}/abtests/suggestions`);
         suggestionData = await res.json();
         createDataLists();
       } catch (err) {

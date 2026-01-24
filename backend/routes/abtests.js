@@ -4,11 +4,34 @@ const ABTest = require('../models/ABTest');
 const ABTestLog = require('../models/ABTestLog');
 const Log = require('../models/Log');
 const Project = require('../models/Project');
+const Suggestion = require('../models/Suggestion');
 const { toJST } = require('../utils/dateUtils');
 const { matchUrl } = require('../utils/urlUtils');
 const { checkConditions, selectCreative } = require('../utils/conditionUtils');
 
 const router = express.Router();
+
+// サジェスト取得エンドポイントを追加
+router.get('/suggestions', async (req, res) => {
+  try {
+    let suggestion = await Suggestion.findOne();
+
+    if (!suggestion) {
+      suggestion = {
+        devices: [],
+        browsers: [],
+        oss: [],
+        languages: [],
+        updatedAt: new Date()
+      };
+    }
+
+    res.json(suggestion);
+  } catch (err) {
+    console.error('Suggestions error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ABテスト一覧取得
 router.get('/', async (req, res) => {
