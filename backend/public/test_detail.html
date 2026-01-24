@@ -518,7 +518,8 @@
         distribution: 0,
         isOriginal: false,
         css: '',
-        javascript: ''
+        javascript: '',
+        imageData: null
       });
       renderCreatives();
     }
@@ -529,6 +530,38 @@
         return;
       }
       creatives.splice(index, 1);
+      renderCreatives();
+    }
+
+    function handleImageUpload(index, file) {
+      if (!file || !file.type.startsWith('image/')) {
+        alert('画像ファイルを選択してください');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        creatives[index].imageData = e.target.result;
+        renderCreatives();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleImagePaste(index, e) {
+      e.preventDefault();
+      const items = e.clipboardData.items;
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          handleImageUpload(index, file);
+          break;
+        }
+      }
+    }
+
+    function removeImage(index) {
+      creatives[index].imageData = null;
       renderCreatives();
     }
 
