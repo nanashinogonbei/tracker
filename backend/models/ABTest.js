@@ -60,7 +60,8 @@ const abtestSchema = new mongoose.Schema({
       default: false
     },
     css: String,
-    javascript: String
+    javascript: String,
+    imageUrl: String
   }],
   createdAt: {
     type: Date,

@@ -1,5 +1,8 @@
 const express = require('express');
 const useragent = require('useragent');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const ABTest = require('../models/ABTest');
 const ABTestLog = require('../models/ABTestLog');
 const Log = require('../models/Log');
@@ -10,6 +13,84 @@ const { matchUrl } = require('../utils/urlUtils');
 const { checkConditions, selectCreative } = require('../utils/conditionUtils');
 
 const router = express.Router();
+
+// uploadsディレクトリを作成
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Multer設定
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'creative-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB制限
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('画像ファイルのみアップロード可能です（jpeg, jpg, png, gif, webp）'));
+    }
+  }
+});
+
+// 画像アップロードエンドポイント（エラーハンドリング付き）
+router.post('/upload-image', (req, res) => {
+  upload.single('image')(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      return res.status(400).json({ error: 'アップロードエラー: ' + err.message });
+    } else if (err) {
+      console.error('Unknown upload error:', err);
+      return res.status(500).json({ error: err.message });
+    }
+    
+    if (!req.file) {
+      console.error('No file in request');
+      return res.status(400).json({ error: '画像ファイルがありません' });
+    }
+
+    const imageUrl = '/uploads/' + req.file.filename;
+    res.json({ imageUrl: imageUrl });
+  });
+});
+
+// 画像削除エンドポイント
+router.delete('/delete-image', (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'imageUrlが必要です' });
+    }
+
+    const filename = path.basename(imageUrl);
+    const filePath = path.join(uploadsDir, filename);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'ファイルが見つかりません' });
+    }
+  } catch (err) {
+    console.error('Image delete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // サジェスト取得エンドポイントを追加
 router.get('/suggestions', async (req, res) => {
@@ -111,6 +192,29 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: '最低1つのクリエイティブが必要です' });
     }
 
+    // 既存のABテストを取得して、削除される画像を確認
+    const existingAbtest = await ABTest.findById(req.params.id);
+    if (existingAbtest) {
+      const existingImageUrls = existingAbtest.creatives
+        .map(c => c.imageUrl)
+        .filter(url => url);
+      
+      const newImageUrls = req.body.creatives
+        .map(c => c.imageUrl)
+        .filter(url => url);
+
+      // 削除される画像ファイルを削除
+      existingImageUrls.forEach(imageUrl => {
+        if (!newImageUrls.includes(imageUrl)) {
+          const filename = path.basename(imageUrl);
+          const filePath = path.join(uploadsDir, filename);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+      });
+    }
+
     const updateData = {
       ...req.body,
       targetUrl: req.body.targetUrl || '',
@@ -141,10 +245,23 @@ router.put('/:id', async (req, res) => {
 // ABテスト削除
 router.delete('/:id', async (req, res) => {
   try {
-    const abtest = await ABTest.findByIdAndDelete(req.params.id);
+    const abtest = await ABTest.findById(req.params.id);
     if (!abtest) {
       return res.status(404).json({ error: 'ABTest not found' });
     }
+
+    // 関連する画像ファイルを削除
+    abtest.creatives.forEach(creative => {
+      if (creative.imageUrl) {
+        const filename = path.basename(creative.imageUrl);
+        const filePath = path.join(uploadsDir, filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    });
+
+    await ABTest.findByIdAndDelete(req.params.id);
     await ABTestLog.deleteMany({ abtestId: req.params.id });
     res.json({ success: true });
   } catch (err) {
@@ -175,17 +292,11 @@ router.post('/execute', async (req, res) => {
   try {
     const { projectId, url, userAgent, language, visitCount, referrer } = req.body;
 
-    console.log('[ABTest Execute] リクエスト受信:', {
-      projectId, url, visitCount, language,
-      userAgent: userAgent?.substring(0, 50) + '...'
-    });
-
     if (!projectId) {
       return res.status(400).json({ error: 'projectId is required' });
     }
 
     const abtests = await ABTest.find({ projectId: projectId, active: true });
-    console.log('[ABTest Execute] アクティブなテスト数:', abtests.length);
 
     if (abtests.length === 0) {
       return res.json({ matched: false });
@@ -215,10 +326,7 @@ router.post('/execute', async (req, res) => {
       referrer: referrer || ''
     };
 
-    console.log('[ABTest Execute] ユーザーコンテキスト:', userContext);
-
     for (const abtest of abtests) {
-      console.log('[ABTest Execute] テストをチェック:', abtest.name);
 
       if (abtest.startDate && now < new Date(abtest.startDate)) {
         console.log('  → 期間外（開始前）');
@@ -249,11 +357,8 @@ router.post('/execute', async (req, res) => {
         continue;
       }
 
-      console.log('  ✅ マッチしました！');
-
       const result = selectCreative(abtest.creatives);
       if (result) {
-        console.log('[ABTest Execute] クリエイティブ選択:', result.creative.name);
         return res.json({
           matched: true,
           abtestId: abtest._id,
@@ -270,7 +375,6 @@ router.post('/execute', async (req, res) => {
       }
     }
 
-    console.log('[ABTest Execute] マッチするテストなし');
     res.json({ matched: false });
   } catch (err) {
     console.error('[ABTest Execute] エラー:', err);
@@ -326,9 +430,6 @@ router.post('/log-impression', async (req, res) => {
     });
 
     await abtestLog.save();
-    console.log('[ABTest Impression] Logged:', {
-      abtestId, userId, creativeIndex, creativeName
-    });
 
     res.json({ status: 'ok' });
   } catch (err) {

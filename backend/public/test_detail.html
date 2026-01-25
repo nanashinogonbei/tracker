@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ABテスト詳細 - Webトラッカー</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
   <div class="min-h-screen flex">
@@ -205,6 +205,93 @@
       { value: 'notContains', label: '含まない' },
       { value: 'notOneOf', label: '次のいずれでもない' }
     ];
+
+    // グローバル関数を最初に定義
+    window.handleImageUpload = async function(index, file) {
+      
+      if (!file) {
+        alert('ファイルが選択されていません');
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        alert('画像ファイルを選択してください');
+        return;
+      }
+
+      // FormDataを使用してファイルをアップロード
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        
+        const res = await fetch(`${API_URL}/abtests/upload-image`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Upload error response:', errorText);
+          throw new Error('画像のアップロードに失敗しました: ' + errorText);
+        }
+
+        const data = await res.json();
+        
+        creatives[index].imageUrl = data.imageUrl;
+        renderCreatives();
+      } catch (err) {
+        console.error('Image upload error:', err);
+        alert('画像のアップロードに失敗しました: ' + err.message);
+      }
+    };
+
+    window.clickUpload = function(index) {
+      const input = document.getElementById('image-upload-' + index);
+      if (input) input.click();
+    };
+
+    window.clickPaste = async function(index) {
+      try {
+        // Clipboard APIを使用してクリップボードから直接読み取る
+        const clipboardItems = await navigator.clipboard.read();
+        
+        for (const clipboardItem of clipboardItems) {
+          for (const type of clipboardItem.types) {
+            if (type.startsWith('image/')) {
+              const blob = await clipboardItem.getType(type);
+              const file = new File([blob], 'pasted-image.png', { type: blob.type });
+              await window.handleImageUpload(index, file);
+              return;
+            }
+          }
+        }
+        
+        alert('クリップボードに画像がありません');
+      } catch (err) {
+        console.error('クリップボード読み取りエラー:', err);
+        alert('クリップボードから画像を読み取れませんでした。\nブラウザの権限を確認してください。');
+      }
+    };
+
+    window.removeImage = async function(index) {
+      const imageUrl = creatives[index].imageUrl;
+      
+      if (imageUrl) {
+        try {
+          await fetch(`${API_URL}/abtests/delete-image`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl: imageUrl })
+          });
+        } catch (err) {
+          console.error('Image delete error:', err);
+        }
+      }
+      
+      creatives[index].imageUrl = null;
+      renderCreatives();
+    };
 
     document.getElementById('test-active').addEventListener('change', (e) => {
       const label = document.getElementById('toggle-label');
@@ -519,7 +606,7 @@
         isOriginal: false,
         css: '',
         javascript: '',
-        imageData: null
+        imageUrl: null
       });
       renderCreatives();
     }
@@ -533,41 +620,18 @@
       renderCreatives();
     }
 
-    function handleImageUpload(index, file) {
-      if (!file || !file.type.startsWith('image/')) {
-        alert('画像ファイルを選択してください');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        creatives[index].imageData = e.target.result;
-        renderCreatives();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function handleImagePaste(index, e) {
-      e.preventDefault();
-      const items = e.clipboardData.items;
-      
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
-          const file = items[i].getAsFile();
-          handleImageUpload(index, file);
-          break;
-        }
-      }
-    }
-
-    function removeImage(index) {
-      creatives[index].imageData = null;
-      renderCreatives();
-    }
-
     function renderCreatives() {
       const container = document.getElementById('creatives-list');
       container.innerHTML = '';
+      
+      // オリジナルのCVRを取得
+      let originalCvr = null;
+      if (statsData && statsData.stats) {
+        const originalStat = statsData.stats.find((stat, idx) => creatives[idx]?.isOriginal);
+        if (originalStat) {
+          originalCvr = originalStat.cvr;
+        }
+      }
       
       creatives.forEach((creative, index) => {
         let statsHtml = `
@@ -580,19 +644,54 @@
         
         if (statsData && statsData.stats && statsData.stats[index]) {
           const stat = statsData.stats[index];
+          
+          // 改善率を計算
+          let improvementHtml = '';
+          if (originalCvr !== null && originalCvr > 0) {
+            if (creative.isOriginal) {
+              improvementHtml = '<div class="text-gray-500">改善率: 基準</div>';
+            } else {
+              const improvement = ((stat.cvr - originalCvr) / originalCvr) * 100;
+              const improvementText = improvement >= 0 ? `+${improvement.toFixed(1)}%` : `${improvement.toFixed(1)}%`;
+              const improvementColor = improvement >= 0 ? 'text-green-600' : 'text-red-600';
+              improvementHtml = `<div class="${improvementColor}">改善率: ${improvementText}</div>`;
+            }
+          }
+          
           statsHtml = `
             <div class="text-sm text-gray-600">
               <div>${stat.impressions.toLocaleString()}回</div>
               <div>CV: ${stat.conversions.toLocaleString()}</div>
               <div>CVR: ${stat.cvr.toFixed(3)}%</div>
+              ${improvementHtml}
             </div>
           `;
         }
         
+        const imagePreview = creative.imageUrl 
+          ? `<div class="relative">
+               <img src="${creative.imageUrl}" class="w-full h-32 object-cover rounded border border-gray-300">
+               <button onclick="window.removeImage(${index}); event.stopPropagation();" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">×</button>
+             </div>`
+          : `<div id="image-drop-${index}" class="w-full h-32 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2">
+               <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+               </svg>
+               <div class="flex gap-2">
+                 <button onclick="window.clickUpload(${index}); event.stopPropagation();" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">アップロード</button>
+                 <button onclick="window.clickPaste(${index}); event.stopPropagation();" class="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600">貼り付け</button>
+               </div>
+             </div>
+             <input type="file" id="image-upload-${index}" accept="image/*" class="hidden">`;
+        
         const row = document.createElement('div');
         row.className = 'border border-gray-200 rounded-lg p-4';
         row.innerHTML = `
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">画像</label>
+              ${imagePreview}
+            </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
               <input type="text" value="${creative.name || ''}" 
@@ -630,6 +729,19 @@
           </div>
         `;
         container.appendChild(row);
+        
+        // ファイルアップロードのイベントリスナーを追加
+        const fileInput = document.getElementById(`image-upload-${index}`);
+        if (fileInput) {
+          fileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+              await window.handleImageUpload(index, file);
+              // ファイル選択をリセット（同じファイルを再度選択できるように）
+              e.target.value = '';
+            }
+          });
+        }
       });
     }
 

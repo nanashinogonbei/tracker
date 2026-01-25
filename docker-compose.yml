@@ -8,6 +8,8 @@ services:
     volumes:
       # JSONファイルの保存先をホストと共有
       - ./backend/exports:/app/exports
+      # 画像アップロードの保存先をホストと共有
+      - ./backend/public/uploads:/tracker/public/uploads
     environment:
       - NODE_ENV=production
       - TZ=Asia/Tokyo

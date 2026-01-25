@@ -9,9 +9,34 @@ const app = express();
 // プロキシ信頼設定
 app.set('trust proxy', true);
 
-// ミドルウェア
-app.use(cors());
-app.use(express.json({ type: '*/*' }));
+// CORS設定（credentials対応）
+app.use(cors({
+  origin: true, // すべてのオリジンを許可（リクエストのOriginをそのまま返す）
+  credentials: true, // credentialsを許可
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// カスタムミドルウェア：multipart/form-data以外はJSONとして解析
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  
+  // multipart/form-dataの場合はスキップ（multerが処理）
+  if (contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  
+  // それ以外はJSONとして解析を試みる
+  express.json({ 
+    type: ['application/json', 'text/plain', 'application/octet-stream'],
+    verify: (req, res, buf, encoding) => {
+      // sendBeaconからのリクエストを処理するため、バッファを保持
+      req.rawBody = buf.toString(encoding || 'utf8');
+    }
+  })(req, res, next);
+});
+
+app.use(express.urlencoded({ extended: true }));
 
 // データベース接続
 connectDB();

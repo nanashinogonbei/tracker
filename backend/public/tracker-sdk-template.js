@@ -133,6 +133,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(data),
+				credentials: 'omit',
 				keepalive: true
 			});
 
@@ -171,14 +172,16 @@
 		const payload = JSON.stringify(data);
 
 		if (isExit) {
-			// ページ離脱時は sendBeacon を使用
-			navigator.sendBeacon(`${SERVER_URL}/track`, payload);
+			// ページ離脱時は sendBeacon を使用（BlobでContent-Typeを設定）
+			const blob = new Blob([payload], { type: 'application/json' });
+			navigator.sendBeacon(`${SERVER_URL}/track`, blob);
 		} else {
 			// 通常のイベントは fetch を使用
 			fetch(`${SERVER_URL}/track`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: payload,
+				credentials: 'omit', // credentialsを使用しない
 				keepalive: true
 			}).catch(err => console.error('[Tracker] Error:', err));
 		}
@@ -193,7 +196,9 @@
 				shouldRecord: !shouldSkipTracking
 			});
 
-			const response = await fetch(`${SERVER_URL}/api/abtests/${ghId}/creative/${ghCreative}`);
+			const response = await fetch(`${SERVER_URL}/api/abtests/${ghId}/creative/${ghCreative}`, {
+				credentials: 'omit'
+			});
 
 			if (!response.ok) {
 				console.error('[ABTest] 指定されたクリエイティブが見つかりません');
@@ -285,6 +290,7 @@
 			const response = await fetch(`${SERVER_URL}/api/abtests/execute`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
+				credentials: 'omit',
 				body: JSON.stringify({
 					projectId: PROJECT_ID,
 					url: window.location.href,
@@ -322,20 +328,15 @@
 						セッション有効期限: new Date(sessionData.expiresAt).toLocaleString()
 					});
 				} else {
-					// 新しいクリエイティブを使用してセッションを保存
 					creative = result.creative;
-					const sessionDuration = result.sessionDuration || 720; // デフォルト12時間
+					const sessionDuration = result.sessionDuration || 720;
 					setSessionData(result.abtestId, creative, sessionDuration);
-					isNewImpression = true; // 新しいインプレッションとしてマーク
+					isNewImpression = true;
 					
-					console.log('[ABTest] ✅ 新しいクリエイティブが適用されました:', {
-						テスト名: result.abtestName || 'N/A',
-						クリエイティブ名: creative.name || '(名称なし)',
-						クリエイティブインデックス: creative.index,
-						オリジナル: creative.isOriginal ? 'はい' : 'いいえ',
-						CSS: creative.css ? 'あり' : 'なし',
-						JavaScript: creative.javascript ? 'あり' : 'なし',
-						セッション期間: `${sessionDuration}分`
+					console.log('new creative:', {
+						test: result.abtestName || 'N/A',
+						name: creative.name || '(名称なし)',
+						index: creative.index,
 					});
 				}
 
@@ -351,7 +352,6 @@
 
 				// オリジナルの場合は何もしない
 				if (creative.isOriginal) {
-					console.log('[ABTest] オリジナル版が選択されました（変更なし）');
 					return;
 				}
 
@@ -360,7 +360,6 @@
 					const style = document.createElement('style');
 					style.textContent = creative.css;
 					document.head.appendChild(style);
-					console.log('[ABTest] ✓ CSSを適用しました');
 					if (isDebugMode) {
 						console.log('[ABTest] CSS内容:', creative.css);
 					}
@@ -372,12 +371,11 @@
 					const executeJS = () => {
 						try {
 							eval(creative.javascript);
-							console.log('[ABTest] ✓ JavaScriptを実行しました');
 							if (isDebugMode) {
 								console.log('[ABTest] JavaScript内容:', creative.javascript);
 							}
 						} catch (err) {
-							console.error('[ABTest] ❌ JavaScript実行エラー:', err);
+							console.error('JavaScript実行エラー:', err);
 						}
 					};
 
@@ -387,11 +385,9 @@
 						executeJS();
 					}
 				}
-			} else {
-				console.log('[ABTest] ℹ️ マッチするテストがありません');
 			}
 		} catch (err) {
-			console.error('[ABTest] ❌ 実行エラー:', err);
+			console.error('test 実行エラー:', err);
 		}
 	}
 

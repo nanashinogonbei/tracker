@@ -31,12 +31,6 @@ router.get('/:projectId.js', async (req, res) => {
 
     const host = req.get('host');
 
-    console.log(`SDK Request - Host: ${host}, Headers:`, {
-      proto: req.get('x-forwarded-proto'),
-      protocol: req.protocol,
-      secure: req.secure
-    });
-
     const customizedSdk = sdkTemplate
       .replace('{{PROJECT_ID}}', project._id.toString())
       .replace('{{API_KEY}}', project.apiKey)
@@ -54,22 +48,35 @@ router.get('/:projectId.js', async (req, res) => {
 // トラッキング
 router.post('/', async (req, res) => {
   try {
-    const { projectId, apiKey, userId, url, event, exitTimestamp } = req.body;
+
+    let data = req.body;
+    
+    // bodyが空でrawBodyがある場合（sendBeaconの場合）
+    if ((!data || Object.keys(data).length === 0) && req.rawBody) {
+      try {
+        data = JSON.parse(req.rawBody);
+      } catch (e) {
+        console.error('[Track] Failed to parse rawBody:', e);
+      }
+    }
+
+    const { projectId, apiKey, userId, url, event, exitTimestamp } = data;
 
     if (!projectId || !apiKey || !userId || !url || !event) {
+      console.error('[Track] Missing parameters:', { projectId, apiKey, userId, url, event });
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
     const project = await Project.findOne({ _id: projectId, apiKey: apiKey });
     if (!project) {
-      console.warn(`Invalid credentials: projectId=${projectId}`);
+      console.warn(`[Track] Invalid credentials: projectId=${projectId}`);
       return res.status(403).json({ error: 'Invalid credentials' });
     }
 
     const normalizedRequestUrl = normalizeUrl(url);
     const normalizedProjectUrl = normalizeUrl(project.url);
     if (!normalizedRequestUrl.startsWith(normalizedProjectUrl)) {
-      console.warn(`URL mismatch: ${url} does not match project ${project.url}`);
+      console.warn(`[Track] URL mismatch: ${url} does not match project ${project.url}`);
       return res.status(403).json({ error: 'URL mismatch' });
     }
 
@@ -105,7 +112,7 @@ router.post('/', async (req, res) => {
     await log.save();
     res.json({ status: 'ok' });
   } catch (err) {
-    console.error('Track error:', err);
+    console.error('[Track] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
