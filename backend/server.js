@@ -3,6 +3,7 @@ const cors = require('cors');
 const cron = require('node-cron');
 const connectDB = require('./config/database');
 const { updateSuggestions } = require('./services/suggestionService');
+const { createInitialAdmin } = require('./services/initService');
 
 const app = express();
 
@@ -37,9 +38,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.urlencoded({ extended: true }));
-
-// データベース接続
-connectDB();
 
 // ルート読み込み
 const projectRoutes = require('./routes/projects');
@@ -100,8 +98,13 @@ cron.schedule('0 0,12 * * *', () => {
   updateSuggestions();
 });
 
-// 初回起動時にサジェストデータを更新
-updateSuggestions();
+async function initialize() {
+  await connectDB();          // データベース接続
+  await createInitialAdmin(); // 初期導入時にadminアカウントを作成
+  await updateSuggestions();  // 初回起動時にサジェストデータを更新
+}
+
+initialize();
 
 // サーバー起動
 const PORT = process.env.PORT || 3000;
