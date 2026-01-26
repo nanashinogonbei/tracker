@@ -177,6 +177,39 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.get('/:abtestId/creative/:creativeIndex', async (req, res) => {
+  try {
+    const abtest = await ABTest.findById(req.params.abtestId);
+    
+    if (!abtest) {
+      return res.status(404).json({ error: 'ABTest not found' });
+    }
+    
+    const creativeIndex = parseInt(req.params.creativeIndex);
+    if (creativeIndex < 0 || creativeIndex >= abtest.creatives.length) {
+      return res.status(404).json({ error: 'Creative not found' });
+    }
+    
+    const creative = abtest.creatives[creativeIndex];
+    
+    res.json({
+      abtestId: abtest._id,
+      abtestName: abtest.name,
+      sessionDuration: abtest.sessionDuration || 720,
+      creative: {
+        index: creativeIndex,
+        name: creative.name,
+        css: creative.css,
+        javascript: creative.javascript,
+        isOriginal: creative.isOriginal
+      }
+    });
+  } catch (err) {
+    console.error('Get specific creative error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ABテスト更新
 router.put('/:id', async (req, res) => {
   try {
