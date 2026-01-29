@@ -99,13 +99,13 @@
         if (!accountId) {
           renderProjectCheckboxes();
         }
-			} catch (err) {
-				console.error('Failed to load projects:', err);
-				if (err.message === 'No authentication token') {
-					return;
-				}
-				alert('プロジェクトの読み込みに失敗しました');
-			}
+      } catch (err) {
+        console.error('Failed to load projects:', err);
+        if (err.message === 'Authentication required' || err.message === 'Session expired') {
+          return;
+        }
+        alert('プロジェクトの読み込みに失敗しました');
+      }
     }
 
     function renderProjectCheckboxes() {
@@ -290,7 +290,7 @@
       const authenticated = await requireAuth();
       if (authenticated) {
         loadProjects();
-        loadAccounts();
+        loadAccount();
       }
     })();
   </script>

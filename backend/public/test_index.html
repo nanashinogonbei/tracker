@@ -44,18 +44,20 @@
     let abtestsStats = new Map(); // ABテストIDをキーに統計情報を保存
 
     async function loadProject() {
-      const res = await authFetch(`${API_URL}/projects`);
-      if (res.status === 401) {
-        alert('セッションが期限切れです。再度ログインしてください。');
-        sessionStorage.clear();
-        window.location.href = 'index.html';
-        return;
+      try {
+        const res = await authFetch(`${API_URL}/projects`);
+        const projects = await res.json();
+        project = projects.find(p => p._id === projectId);
+        
+        document.getElementById('project-name').textContent = project.name;
+        document.getElementById('project-url').textContent = project.url;
+      } catch (err) {
+        console.error('Failed to load project:', err);
+        if (err.message === 'Authentication required' || err.message === 'Session expired') {
+          return;
+        }
+        alert('プロジェクトの読み込みに失敗しました');
       }
-      const projects = await res.json();
-      project = projects.find(p => p._id === projectId);
-      
-      document.getElementById('project-name').textContent = project.name;
-      document.getElementById('project-url').textContent = project.url;
     }
 
     async function loadABTestStats(abtestId) {
