@@ -7,7 +7,6 @@ require('dotenv').config();
 const express = require('express');
 const cron = require('node-cron');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
 const { setupSecurity, getCorsOptions, apiLimiter, trackingLimiter } = require('./config/security');
 const { authenticate, checkProjectPermission } = require('./middleware/auth');
@@ -23,9 +22,6 @@ if (!process.env.JWT_SECRET) {
 
 // プロキシ信頼設定
 app.set('trust proxy', true);
-
-// Cookie Parser（セキュリティミドルウェアより前に配置）
-app.use(cookieParser());
 
 // セキュリティミドルウェアのセットアップ
 setupSecurity(app);
@@ -72,12 +68,8 @@ app.use('/track', cors({
   credentials: false
 }), trackingLimiter, trackerRoutes);
 
-// 公開エンドポイント（認証不要）- Cookieを使うのでcredentials: true
-const authCorsOptions = {
-  ...getCorsOptions(),
-  credentials: true
-};
-app.use('/api/auth', cors(authCorsOptions), authRoutes);
+// 公開エンドポイント（認証不要）
+app.use('/api/auth', cors(getCorsOptions()), authRoutes);
 
 // ABテスト実行エンドポイント（認証不要 - SDKから呼ばれる）
 app.post('/api/abtests/execute', cors({
@@ -287,15 +279,11 @@ app.get('/api/abtests/:abtestId/creative/:creativeIndex', cors({
 // 静的ファイル（認証不要）
 app.use(express.static('public'));
 
-// 保護されたAPIエンドポイント（認証必要）- credentials: true
-const protectedCorsOptions = {
-  ...getCorsOptions(),
-  credentials: true
-};
-app.use('/api/projects', cors(protectedCorsOptions), apiLimiter, authenticate, projectRoutes);
-app.use('/api/analytics', cors(protectedCorsOptions), apiLimiter, authenticate, analyticsRoutes);
-app.use('/api/abtests', cors(protectedCorsOptions), apiLimiter, authenticate, abtestRoutes);
-app.use('/api/accounts', cors(protectedCorsOptions), apiLimiter, authenticate, accountRoutes);
+// 保護されたAPIエンドポイント（認証必要）- 制限的なCORS設定
+app.use('/api/projects', cors(getCorsOptions()), apiLimiter, authenticate, projectRoutes);
+app.use('/api/analytics', cors(getCorsOptions()), apiLimiter, authenticate, analyticsRoutes);
+app.use('/api/abtests', cors(getCorsOptions()), apiLimiter, authenticate, abtestRoutes);
+app.use('/api/accounts', cors(getCorsOptions()), apiLimiter, authenticate, accountRoutes);
 
 // エラーハンドリングミドルウェア
 app.use((err, req, res, next) => {

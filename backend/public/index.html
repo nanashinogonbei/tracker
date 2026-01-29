@@ -92,6 +92,7 @@
     </div>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script>
     const API_URL = '/api';
 
@@ -114,8 +115,7 @@
       }, 5000);
     }
 
-    // ログインフォーム送信
-    // ログインフォーム送信（修正部分のみ）
+    // ログインフォーム送信（Cookieベース）
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -130,6 +130,7 @@
       try {
         const res = await fetch(`${API_URL}/auth/login`, {
           method: 'POST',
+          credentials: 'include', // Cookieを含める
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accountId, password })
         });
@@ -140,19 +141,7 @@
           return;
         }
         
-        const data = await res.json();
-        
-        // ログイン成功 - セッション情報を保存
-        sessionStorage.setItem('loggedIn', 'true');
-        sessionStorage.setItem('accountId', data.account.accountId);
-        sessionStorage.setItem('allProjects', data.account.allProjects);
-        sessionStorage.setItem('token', data.token);
-        
-        if (!data.account.allProjects && data.account.permissionIds) {
-          sessionStorage.setItem('permissionIds', JSON.stringify(data.account.permissionIds));
-        }
-        
-        // 管理画面にリダイレクト
+        // ログイン成功 - Cookieに保存されているので追加処理は不要
         window.location.href = 'admin.html';
         
       } catch (err) {
@@ -162,9 +151,12 @@
     });
 
     // 既にログイン済みの場合は管理画面にリダイレクト
-    if (sessionStorage.getItem('loggedIn') === 'true') {
-      window.location.href = 'admin.html';
-    }
+    (async () => {
+      const session = await checkSession();
+      if (session && session.valid) {
+        window.location.href = 'admin.html';
+      }
+    })();
   </script>
 </body>
 </html>

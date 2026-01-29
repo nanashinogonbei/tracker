@@ -40,39 +40,13 @@
     </main>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script>
     const API_URL = '/api';
-    
-		// 認証付きfetchヘルパー関数
-		function authFetch(url, options = {}) {
-			const token = sessionStorage.getItem('token');
-			
-			if (!token) {
-				console.error('No token found, redirecting to login');
-				window.location.href = 'index.html';
-				return Promise.reject(new Error('No authentication token'));
-			}
-			
-			const headers = {
-				...options.headers,
-				'Authorization': `Bearer ${token}`
-			};
-			
-			return fetch(url, {
-				...options,
-				headers
-			});
-		}
 
     async function loadAccounts() {
       try {
         const res = await authFetch(`${API_URL}/accounts`);
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
         const accounts = await res.json();
         
         const list = document.getElementById('accounts-list');
@@ -99,13 +73,13 @@
         document.querySelectorAll('.delete-btn').forEach(btn => {
           btn.addEventListener('click', () => deleteAccount(btn.dataset.accountId));
         });
-			} catch (err) {
-				console.error('Failed to load accounts:', err);
-				if (err.message === 'No authentication token') {
-					return;
-				}
-				alert('accountsの読み込みに失敗しました');
-			}
+      } catch (err) {
+        console.error('Failed to load accounts:', err);
+        if (err.message === 'Authentication required' || err.message === 'Session expired') {
+          return;
+        }
+        alert('アカウントの読み込みに失敗しました');
+      }
     }
 
     async function deleteAccount(accountId) {
@@ -135,19 +109,22 @@
       location.href = 'account_detail.html';
     });
 
-    // ログイン機能
-    if (sessionStorage.getItem('loggedIn') !== 'true') {
-      window.location.href = 'index.html';
-    }
+    // ログアウト処理
     document.getElementById('logout-btn').addEventListener('click', (e) => {
       e.preventDefault();
       if (confirm('ログアウトしますか？')) {
-        sessionStorage.clear();
-        window.location.href = 'index.html';
+        logout();
       }
     });
 
-    loadAccounts();
+    // ページ初期化
+    (async () => {
+      // 認証チェック
+      const authenticated = await requireAuth();
+      if (authenticated) {
+        loadAccounts();
+      }
+    })();
   </script>
 </body>
 </html>

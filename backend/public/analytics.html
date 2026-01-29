@@ -66,6 +66,7 @@
     </main>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script>
     const API_URL = '/api';
     const projectId = new URLSearchParams(location.search).get('id');
@@ -76,36 +77,9 @@
     let selectedFilters = { device: [], browser: [], os: [], language: ['ja'] };
     let eventRows = [];
 
-		// 認証付きfetchヘルパー関数
-		function authFetch(url, options = {}) {
-			const token = sessionStorage.getItem('token');
-			
-			if (!token) {
-				console.error('No token found, redirecting to login');
-				window.location.href = 'index.html';
-				return Promise.reject(new Error('No authentication token'));
-			}
-			
-			const headers = {
-				...options.headers,
-				'Authorization': `Bearer ${token}`
-			};
-			
-			return fetch(url, {
-				...options,
-				headers
-			});
-		}
-
     async function loadProject() {
       try {
         const res = await authFetch(`${API_URL}/projects`);
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
         const projects = await res.json();
         project = projects.find(p => p._id === projectId);
         
@@ -113,7 +87,7 @@
         document.getElementById('project-url').textContent = project.url;
 			} catch (err) {
 				console.error('Failed to load projects:', err);
-				if (err.message === 'No authentication token') {
+				if (err.message === 'Authentication required' || err.message === 'Session expired') {
 					return;
 				}
 				alert('プロジェクトの読み込みに失敗しました');
@@ -126,12 +100,6 @@
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
         suggestionData = await res.json();
         console.log('Suggestions loaded:', suggestionData);
       } catch (err) {
@@ -154,12 +122,6 @@
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
         analyticsData = await res.json();
         
         document.getElementById('unique-users').textContent = analyticsData.uniqueUsers;
@@ -183,7 +145,7 @@
         eventRows.forEach((_, idx) => loadEventCount(idx));
 			} catch (err) {
 				console.error('Failed to load analytics:', err);
-				if (err.message === 'No authentication token') {
+				if (err.message === 'Authentication required' || err.message === 'Session expired') {
 					return;
 				}
 				alert('プロジェクトの読み込みに失敗しました');
@@ -357,12 +319,6 @@
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
         analyticsData = await res.json();
         
         document.getElementById('unique-users').textContent = analyticsData.uniqueUsers;
@@ -380,7 +336,7 @@
         eventRows.forEach((_, idx) => loadEventCount(idx));
 			} catch (err) {
 				console.error('Failed to load analytics:', err);
-				if (err.message === 'No authentication token') {
+				if (err.message === 'Authentication required' || err.message === 'Session expired') {
 					return;
 				}
 				alert('アナリティクスの読み込みに失敗しました');
@@ -467,12 +423,6 @@
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
         const data = await res.json();
         eventRows[rowId].count = data.count;
         document.getElementById(`event-count-${rowId}`).textContent = data.count;
@@ -497,25 +447,25 @@
       document.getElementById('end-date').value = getJSTDateString(jstNow);
     }
 
-    if (sessionStorage.getItem('loggedIn') !== 'true') {
-      window.location.href = 'index.html';
-    }
+    // ログアウト処理
     document.getElementById('logout-btn').addEventListener('click', (e) => {
       e.preventDefault();
       if (confirm('ログアウトしますか？')) {
-        sessionStorage.clear();
-        window.location.href = 'index.html';
+        logout();
       }
     });
 
-    async function init() {
-      initDates();
-      await loadProject();
-      await loadSuggestions();
-      await loadAnalytics();
-    }
-
-    init();
+    // ページ初期化
+    (async () => {
+      // 認証チェック
+      const authenticated = await requireAuth();
+      if (authenticated) {
+        initDates();
+        loadProject();
+        loadSuggestions();
+        loadAnalytics();
+      }
+    })();
 
     document.getElementById('start-date').addEventListener('change', loadAnalytics);
     document.getElementById('end-date').addEventListener('change', loadAnalytics);

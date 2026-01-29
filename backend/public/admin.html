@@ -27,39 +27,13 @@
 		</main>
 	</div>
 
+	<script src="/js/auth.js"></script>
 	<script>
 		const API_URL = '/api';
-
-		// 認証付きfetchヘルパー関数
-		function authFetch(url, options = {}) {
-			const token = sessionStorage.getItem('token');
-			
-			if (!token) {
-				console.error('No token found, redirecting to login');
-				window.location.href = 'index.html';
-				return Promise.reject(new Error('No authentication token'));
-			}
-			
-			const headers = {
-				...options.headers,
-				'Authorization': `Bearer ${token}`
-			};
-			
-			return fetch(url, {
-				...options,
-				headers
-			});
-		}
 
 		async function loadProjects() {
 			try {
 				const res = await authFetch(`${API_URL}/projects`);
-				if (res.status === 401) {
-					alert('セッションが期限切れです。再度ログインしてください。');
-					sessionStorage.clear();
-					window.location.href = 'index.html';
-					return;
-				}
 				const projects = await res.json();
 				
 				const list = document.getElementById('projects-list');
@@ -94,8 +68,8 @@
 				`).join('');
 			} catch (err) {
 				console.error('Failed to load projects:', err);
-				if (err.message === 'No authentication token') {
-					return;
+				if (err.message === 'Authentication required' || err.message === 'Session expired') {
+					return; // authFetchが既にリダイレクト処理済み
 				}
 				alert('プロジェクトの読み込みに失敗しました');
 			}
@@ -171,19 +145,22 @@
 			}
 		});
 
-    // ログイン機能
-    if (sessionStorage.getItem('loggedIn') !== 'true') {
-      window.location.href = 'index.html';
-    }
-    document.getElementById('logout-btn').addEventListener('click', (e) => {
-      e.preventDefault();
-      if (confirm('ログアウトしますか？')) {
-        sessionStorage.clear();
-        window.location.href = 'index.html';
-      }
-    });
+		// ログアウト処理
+		document.getElementById('logout-btn').addEventListener('click', (e) => {
+			e.preventDefault();
+			if (confirm('ログアウトしますか？')) {
+				logout();
+			}
+		});
 
-		loadProjects();
+		// ページ初期化
+		(async () => {
+			// 認証チェック
+			const authenticated = await requireAuth();
+			if (authenticated) {
+				loadProjects();
+			}
+		})();
 	</script>
 </body>
 </html>
