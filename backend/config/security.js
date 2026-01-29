@@ -31,6 +31,19 @@ const trackingLimiter = rateLimit({
   }
 });
 
+// 画像アップロード用レートリミッター（より厳格）
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 20, // 最大20リクエスト
+  message: '画像のアップロードが多すぎます。しばらく待ってから再試行してください。',
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false
+  }
+});
+
 // セキュリティミドルウェア設定
 function setupSecurity(app) {
   // Helmet - セキュリティヘッダー設定
@@ -65,7 +78,8 @@ function setupSecurity(app) {
 
   return {
     apiLimiter,
-    trackingLimiter
+    trackingLimiter,
+    uploadLimiter
   };
 }
 
@@ -120,5 +134,6 @@ module.exports = {
   getCorsOptions,
   validateInput,
   apiLimiter,
-  trackingLimiter
+  trackingLimiter,
+  uploadLimiter
 };

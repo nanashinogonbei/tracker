@@ -14,8 +14,9 @@ services:
       - NODE_ENV=production
       - TZ=Asia/Tokyo
       # MongoDB認証情報を追加
-      - MONGO_USER=admin
-      - MONGO_PASSWORD=changeme
+      - MONGO_USER=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - tracker_network
       - default
@@ -33,8 +34,8 @@ services:
     environment:
       - TZ=Asia/Tokyo
       # MongoDB認証を有効化
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=changeme
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     networks:
       - default
     restart: unless-stopped

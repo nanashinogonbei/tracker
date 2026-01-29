@@ -18,7 +18,8 @@ const app = express();
 
 // 環境変数チェック
 if (!process.env.JWT_SECRET) {
-  console.warn('[Warning] JWT_SECRET not set. Using default (INSECURE)');
+  console.error('[FATAL] JWT_SECRET is not set. Application cannot start.');
+  process.exit(1); // アプリケーションを終了
 }
 
 // プロキシ信頼設定

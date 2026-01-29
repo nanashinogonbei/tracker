@@ -8,6 +8,8 @@ const ABTestLog = require('../models/ABTestLog');
 const Log = require('../models/Log');
 const Project = require('../models/Project');
 const Suggestion = require('../models/Suggestion');
+const { v4: uuidv4 } = require('uuid');
+const { uploadLimiter } = require('../config/security');
 const { toJST } = require('../utils/dateUtils');
 const { matchUrl } = require('../utils/urlUtils');
 const { checkConditions, selectCreative } = require('../utils/conditionUtils');
@@ -20,52 +22,49 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Multer設定
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'creative-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Multer設定（メモリ上にファイルを保存）
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB制限
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('画像ファイルのみアップロード可能です（jpeg, jpg, png, gif, webp）'));
-    }
-  }
 });
 
-// 画像アップロードエンドポイント（エラーハンドリング付き）
-router.post('/upload-image', (req, res) => {
-  upload.single('image')(req, res, function (err) {
-    if (err instanceof multer.MulterError) {
-      console.error('Multer error:', err);
-      return res.status(400).json({ error: 'アップロードエラー: ' + err.message });
-    } else if (err) {
-      console.error('Unknown upload error:', err);
-      return res.status(500).json({ error: err.message });
-    }
-    
+// 画像アップロードエンドポイント（セキュリティ強化版）
+router.post('/upload-image', uploadLimiter, upload.single('image'), async (req, res) => {
+  try {
     if (!req.file) {
-      console.error('No file in request');
       return res.status(400).json({ error: '画像ファイルがありません' });
     }
 
-    const imageUrl = '/uploads/' + req.file.filename;
+    // 動的にfile-typeをimport
+    const { fileTypeFromBuffer } = await (eval(`import('file-type')`));
+
+    // マジックバイト検証
+    const fileType = await fileTypeFromBuffer(req.file.buffer);
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!fileType || !allowedTypes.includes(fileType.mime)) {
+      return res.status(400).json({ error: '無効なファイルタイプです。許可されているのはjpeg, png, gif, webpのみです。' });
+    }
+
+    // 安全なファイル名を生成
+    const filename = `${uuidv4()}.${fileType.ext}`;
+    const filePath = path.join(uploadsDir, filename);
+
+    // ファイルをディスクに書き込み
+    await fs.promises.writeFile(filePath, req.file.buffer);
+
+    const imageUrl = `/uploads/${filename}`;
     res.json({ imageUrl: imageUrl });
-  });
+
+  } catch (err) {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      return res.status(400).json({ error: 'アップロードエラー: ' + err.message });
+    } else {
+      console.error('Unknown upload error:', err);
+      return res.status(500).json({ error: 'サーバーエラーが発生しました。' });
+    }
+  }
 });
 
 // 画像削除エンドポイント
