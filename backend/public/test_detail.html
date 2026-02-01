@@ -32,7 +32,7 @@
             </label>
           </div>
         </div>
-        <a href="#" onclick="goBack(); return false;" class="text-blue-500 text-sm hover:underline">戻る</a>
+        <a href="#" id="back-btn" class="text-blue-500 text-sm hover:underline">戻る</a>
       </div>
 
       <div class="bg-white rounded-lg shadow p-6 mb-6 space-y-4">
@@ -72,9 +72,10 @@
       <div class="bg-white rounded-lg shadow p-6 mb-6">
         <div class="text-lg font-medium text-gray-900 mb-4">実行条件</div>
         
-        <div class="space-y-4">
+        <div class="space-y-4" id="conditions-wrapper">
+          <!-- device -->
           <div class="border border-gray-200 rounded-lg">
-            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('device')">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-action="toggle-condition" data-condition-type="device">
               <span>デバイス</span>
               <svg class="w-5 h-5 transform transition-transform" id="device-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -82,12 +83,13 @@
             </button>
             <div class="px-4 pb-4 space-y-2" id="condition-device"></div>
             <div class="px-4 pb-4">
-              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('device')">+ 条件を追加</button>
+              <button class="text-blue-500 hover:text-blue-600 text-sm" data-action="add-condition-row" data-condition-type="device">+ 条件を追加</button>
             </div>
           </div>
 
+          <!-- language -->
           <div class="border border-gray-200 rounded-lg">
-            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('language')">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-action="toggle-condition" data-condition-type="language">
               <span>言語</span>
               <svg class="w-5 h-5 transform transition-transform" id="language-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -95,12 +97,13 @@
             </button>
             <div class="px-4 pb-4 space-y-2" id="condition-language"></div>
             <div class="px-4 pb-4">
-              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('language')">+ 条件を追加</button>
+              <button class="text-blue-500 hover:text-blue-600 text-sm" data-action="add-condition-row" data-condition-type="language">+ 条件を追加</button>
             </div>
           </div>
 
+          <!-- os -->
           <div class="border border-gray-200 rounded-lg">
-            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('os')">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-action="toggle-condition" data-condition-type="os">
               <span>OS</span>
               <svg class="w-5 h-5 transform transition-transform" id="os-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -108,12 +111,13 @@
             </button>
             <div class="px-4 pb-4 space-y-2" id="condition-os"></div>
             <div class="px-4 pb-4">
-              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('os')">+ 条件を追加</button>
+              <button class="text-blue-500 hover:text-blue-600 text-sm" data-action="add-condition-row" data-condition-type="os">+ 条件を追加</button>
             </div>
           </div>
 
+          <!-- browser -->
           <div class="border border-gray-200 rounded-lg">
-            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('browser')">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-action="toggle-condition" data-condition-type="browser">
               <span>ブラウザ</span>
               <svg class="w-5 h-5 transform transition-transform" id="browser-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -121,12 +125,13 @@
             </button>
             <div class="px-4 pb-4 space-y-2" id="condition-browser"></div>
             <div class="px-4 pb-4">
-              <button class="text-blue-500 hover:text-blue-600 text-sm" onclick="addConditionRow('browser')">+ 条件を追加</button>
+              <button class="text-blue-500 hover:text-blue-600 text-sm" data-action="add-condition-row" data-condition-type="browser">+ 条件を追加</button>
             </div>
           </div>
 
+          <!-- other -->
           <div class="border border-gray-200 rounded-lg">
-            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" onclick="toggleCondition('other')">
+            <button class="w-full px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-action="toggle-condition" data-condition-type="other">
               <span>その他</span>
               <svg class="w-5 h-5 transform transition-transform" id="other-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -145,15 +150,16 @@
           CVR: <span id="total-cvr" class="font-semibold">10</span>%
         </div>
         <div id="creatives-list" class="space-y-4"></div>
-        <button class="mt-4 w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-600 text-xl" onclick="addCreative()">+</button>
+        <button class="mt-4 w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-600 text-xl" data-action="add-creative">+</button>
       </div>
 
       <div class="flex justify-center">
-        <button class="bg-blue-500 text-white px-8 py-3 rounded-md hover:bg-blue-600 font-medium" onclick="saveABTest()">このテストを保存する</button>
+        <button class="bg-blue-500 text-white px-8 py-3 rounded-md hover:bg-blue-600 font-medium" data-action="save-abtest">このテストを保存する</button>
       </div>
     </main>
   </div>
 
+  <!-- Code Modal -->
   <div id="code-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
       <div class="p-6 border-b border-gray-200">
@@ -173,8 +179,8 @@
       </div>
 
       <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
-        <button class="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" onclick="closeModal()">キャンセル</button>
-        <button class="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600" onclick="saveCode()">登録する</button>
+        <button class="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" data-action="close-modal">キャンセル</button>
+        <button class="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600" data-action="save-code">登録する</button>
       </div>
     </div>
   </div>
@@ -207,25 +213,21 @@
       { value: 'notOneOf', label: '次のいずれでもない' }
     ];
 
-    // グローバル関数を最初に定義
-    window.handleImageUpload = async function(index, file) {
-      
+    // ─── Image helpers ───────────────────────────────────────────────
+    async function handleImageUpload(index, file) {
       if (!file) {
         alert('ファイルが選択されていません');
         return;
       }
-      
       if (!file.type.startsWith('image/')) {
         alert('画像ファイルを選択してください');
         return;
       }
 
-      // FormDataを使用してファイルをアップロード
       const formData = new FormData();
       formData.append('image', file);
 
       try {
-        
         const res = await authFetch(`${API_URL}/abtests/upload-image`, {
           method: 'POST',
           body: formData
@@ -238,46 +240,41 @@
         }
 
         const data = await res.json();
-        
         creatives[index].imageUrl = data.imageUrl;
         renderCreatives();
       } catch (err) {
         console.error('Image upload error:', err);
         alert('画像のアップロードに失敗しました: ' + err.message);
       }
-    };
+    }
 
-    window.clickUpload = function(index) {
+    function clickUpload(index) {
       const input = document.getElementById('image-upload-' + index);
       if (input) input.click();
-    };
+    }
 
-    window.clickPaste = async function(index) {
+    async function clickPaste(index) {
       try {
-        // Clipboard APIを使用してクリップボードから直接読み取る
         const clipboardItems = await navigator.clipboard.read();
-        
         for (const clipboardItem of clipboardItems) {
           for (const type of clipboardItem.types) {
             if (type.startsWith('image/')) {
               const blob = await clipboardItem.getType(type);
               const file = new File([blob], 'pasted-image.png', { type: blob.type });
-              await window.handleImageUpload(index, file);
+              await handleImageUpload(index, file);
               return;
             }
           }
         }
-        
         alert('クリップボードに画像がありません');
       } catch (err) {
         console.error('クリップボード読み取りエラー:', err);
         alert('クリップボードから画像を読み取れませんでした。\nブラウザの権限を確認してください。');
       }
-    };
+    }
 
-    window.removeImage = async function(index) {
+    async function removeImage(index) {
       const imageUrl = creatives[index].imageUrl;
-      
       if (imageUrl) {
         try {
           await authFetch(`${API_URL}/abtests/delete-image`, {
@@ -289,16 +286,16 @@
           console.error('Image delete error:', err);
         }
       }
-      
       creatives[index].imageUrl = null;
       renderCreatives();
-    };
+    }
 
+    // ─── Toggle ON/OFF switch ────────────────────────────────────────
     document.getElementById('test-active').addEventListener('change', (e) => {
       const label = document.getElementById('toggle-label');
       const bg = document.getElementById('toggle-bg');
       const handle = document.getElementById('toggle-handle');
-      
+
       if (e.target.checked) {
         label.textContent = 'ON';
         bg.classList.add('bg-green-500');
@@ -312,6 +309,7 @@
       }
     });
 
+    // ─── Load data ───────────────────────────────────────────────────
     async function loadABTest() {
       if (!abtestId) {
         document.getElementById('test-name').value = '';
@@ -324,17 +322,17 @@
       try {
         const res = await authFetch(`${API_URL}/abtests/${abtestId}`);
         currentABTest = await res.json();
-        
+
         document.getElementById('test-name').value = currentABTest.name || '';
-        
+
         const activeCheckbox = document.getElementById('test-active');
         activeCheckbox.checked = currentABTest.active || false;
         activeCheckbox.dispatchEvent(new Event('change'));
-        
+
         document.getElementById('cv-code').value = currentABTest.cvCode || '';
         document.getElementById('target-url').value = currentABTest.targetUrl || '';
         document.getElementById('exclude-url').value = currentABTest.excludeUrl || '';
-        
+
         if (currentABTest.startDate) {
           document.getElementById('start-date').value = formatDateForInput(currentABTest.startDate);
         }
@@ -345,25 +343,25 @@
         const sessionMinutes = currentABTest.sessionDuration || 720;
         const hours = Math.floor(sessionMinutes / 60);
         const minutes = sessionMinutes % 60;
-        document.getElementById('session-duration').value = 
+        document.getElementById('session-duration').value =
           `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
         conditions = currentABTest.conditions || { device: [], language: [], os: [], browser: [], other: [] };
         creatives = currentABTest.creatives || [];
-        
+
         if (creatives.length === 0) {
           addCreative();
         }
 
         renderConditions();
         renderCreatives();
-			} catch (err) {
-				console.error('Failed to load abtests:', err);
-				if (err.message === 'Authentication required' || err.message === 'Session expired') {
-					return;
-				}
-				alert('プロジェクトの読み込みに失敗しました');
-			}
+      } catch (err) {
+        console.error('Failed to load abtests:', err);
+        if (err.message === 'Authentication required' || err.message === 'Session expired') {
+          return;
+        }
+        alert('プロジェクトの読み込みに失敗しました');
+      }
     }
 
     async function loadSuggestions() {
@@ -371,64 +369,60 @@
         const res = await authFetch(`${API_URL}/abtests/suggestions`);
         suggestionData = await res.json();
         createDataLists();
-			} catch (err) {
-				console.error('Failed to load _suggestions:', err);
+      } catch (err) {
+        console.error('Failed to load _suggestions:', err);
         suggestionData = { devices: [], browsers: [], oss: [], languages: [] };
-				if (err.message === 'Authentication required' || err.message === 'Session expired') {
-					return;
-				}
-				alert('abtestsの読み込みに失敗しました');
-			}
+        if (err.message === 'Authentication required' || err.message === 'Session expired') {
+          return;
+        }
+        alert('abtestsの読み込みに失敗しました');
+      }
     }
 
     async function loadABTestStats() {
       if (!abtestId) return;
-      
       try {
         const res = await authFetch(`${API_URL}/abtests/${abtestId}/stats`);
         statsData = await res.json();
         updateStatsDisplay();
         renderCreatives();
-			} catch (err) {
-				console.error('Failed to load abtests:', err);
-				if (err.message === 'Authentication required' || err.message === 'Session expired') {
-					return;
-				}
-				alert('abtestsの読み込みに失敗しました');
-			}
+      } catch (err) {
+        console.error('Failed to load abtests:', err);
+        if (err.message === 'Authentication required' || err.message === 'Session expired') {
+          return;
+        }
+        alert('abtestsの読み込みに失敗しました');
+      }
     }
 
     function updateStatsDisplay() {
       if (!statsData) return;
-      
-      document.getElementById('total-impressions').textContent = 
+      document.getElementById('total-impressions').textContent =
         statsData.total.totalImpressions.toLocaleString();
-      document.getElementById('total-cv').textContent = 
+      document.getElementById('total-cv').textContent =
         statsData.total.totalConversions.toLocaleString();
-      document.getElementById('total-cvr').textContent = 
+      document.getElementById('total-cvr').textContent =
         statsData.total.totalCvr.toFixed(2);
     }
 
     function createDataLists() {
       document.querySelectorAll('datalist[id^="suggestions-"]').forEach(el => el.remove());
-      
+
       const types = [
         { id: 'device', data: suggestionData.devices || [] },
         { id: 'browser', data: suggestionData.browsers || [] },
         { id: 'os', data: suggestionData.oss || [] },
         { id: 'language', data: suggestionData.languages || [] }
       ];
-      
+
       types.forEach(type => {
         const datalist = document.createElement('datalist');
         datalist.id = `suggestions-${type.id}`;
-        
         type.data.forEach(value => {
           const option = document.createElement('option');
           option.value = value;
           datalist.appendChild(option);
         });
-        
         document.body.appendChild(datalist);
       });
     }
@@ -441,6 +435,7 @@
       return `${year}-${month}-${day}`;
     }
 
+    // ─── Conditions ──────────────────────────────────────────────────
     function initializeConditions() {
       ['device', 'language', 'os', 'browser', 'other'].forEach(type => {
         conditions[type] = [];
@@ -452,7 +447,7 @@
       ['device', 'language', 'os', 'browser', 'other'].forEach(type => {
         const container = document.getElementById(`condition-${type}`);
         container.innerHTML = '';
-        
+
         if (conditions[type].length === 0) {
           addConditionRow(type);
         } else {
@@ -466,52 +461,52 @@
     function renderConditionRow(type, index) {
       const container = document.getElementById(`condition-${type}`);
       const condition = conditions[type][index];
-      
+
       const row = document.createElement('div');
-      
+
       if (type === 'other') {
         row.className = 'flex items-center gap-3';
         row.innerHTML = `
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700">訪問回数</span>
-            <input type="number" class="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            <input type="number" class="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                    data-type="${type}" data-index="${index}" data-field="visitCount" value="${condition.visitCount || '0'}" min="0">
             <span class="text-sm text-gray-700">以上</span>
           </div>
           <div class="flex-1 flex items-center gap-2">
             <span class="text-sm text-gray-700">リファラーURL</span>
-            <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                   data-type="${type}" data-index="${index}" data-field="referrer" value="${condition.referrer || ''}" 
+            <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   data-type="${type}" data-index="${index}" data-field="referrer" value="${condition.referrer || ''}"
                    placeholder="例) /^https?:\/\/(www\.)?example\.com\/horse\/123$/i">
           </div>
         `;
       } else {
         row.className = 'flex items-center gap-3';
         row.innerHTML = `
-          <input type="text" 
+          <input type="text"
                 class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-type="${type}" 
-                data-index="${index}" 
-                data-field="value" 
-                value="${condition.value || ''}" 
+                data-type="${type}"
+                data-index="${index}"
+                data-field="value"
+                value="${condition.value || ''}"
                 placeholder="値を入力"
                 list="suggestions-${type}"
                 autocomplete="off">
-          <select class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+          <select class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   data-type="${type}" data-index="${index}" data-field="condition">
             ${conditionTypes.map(ct => `<option value="${ct.value}" ${condition.condition === ct.value ? 'selected' : ''}>${ct.label}</option>`).join('')}
           </select>
-          ${isMultiValueCondition(condition.condition) ? 
-            `<textarea class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                      data-type="${type}" data-index="${index}" data-field="values" 
+          ${isMultiValueCondition(condition.condition) ?
+            `<textarea class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-type="${type}" data-index="${index}" data-field="values"
                       placeholder="改行区切りで入力" rows="3">${(condition.values || []).join('\n')}</textarea>` :
             ''
           }
-          <button class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm" 
-                  onclick="removeConditionRow('${type}', ${index})">削除</button>
+          <button class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+                  data-action="remove-condition-row" data-condition-type="${type}" data-condition-index="${index}">削除</button>
         `;
       }
-      
+
       container.appendChild(row);
     }
 
@@ -521,13 +516,13 @@
 
     function addConditionRow(type) {
       if (!conditions[type]) conditions[type] = [];
-      
+
       if (type === 'other') {
         conditions[type].push({ visitCount: '0', referrer: '' });
       } else {
         conditions[type].push({ value: '', condition: 'exact', values: [] });
       }
-      
+
       renderConditionRow(type, conditions[type].length - 1);
     }
 
@@ -536,7 +531,7 @@
       const container = document.getElementById(`condition-${type}`);
       container.innerHTML = '';
       conditions[type].forEach((_, i) => renderConditionRow(type, i));
-      
+
       if (conditions[type].length === 0) {
         addConditionRow(type);
       }
@@ -545,7 +540,7 @@
     function toggleCondition(type) {
       const content = document.getElementById(`condition-${type}`);
       const arrow = document.getElementById(`${type}-arrow`);
-      
+
       if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         arrow.classList.remove('rotate-180');
@@ -555,63 +550,44 @@
       }
     }
 
-    document.addEventListener('change', (e) => {
-      if (e.target.dataset.type && e.target.dataset.index !== undefined) {
-        const type = e.target.dataset.type;
-        const index = parseInt(e.target.dataset.index);
-        const field = e.target.dataset.field;
-        
+    // ─── Condition input delegation (change / input) ─────────────────
+    // Delegated on #conditions-wrapper to cover dynamically added rows.
+    document.getElementById('conditions-wrapper').addEventListener('change', (e) => {
+      const target = e.target;
+      if (target.dataset.type && target.dataset.index !== undefined) {
+        const type = target.dataset.type;
+        const index = parseInt(target.dataset.index);
+        const field = target.dataset.field;
+
         if (field === 'values') {
-          conditions[type][index][field] = e.target.value.split('\n').filter(v => v.trim());
+          conditions[type][index][field] = target.value.split('\n').filter(v => v.trim());
         } else {
-          conditions[type][index][field] = e.target.value;
+          conditions[type][index][field] = target.value;
         }
-        
+
+        // When the condition-type selector changes, re-render to show/hide the values textarea.
         if (field === 'condition' && type !== 'other') {
           const container = document.getElementById(`condition-${type}`);
           container.innerHTML = '';
           conditions[type].forEach((_, i) => renderConditionRow(type, i));
         }
       }
-      
-      if (e.target.dataset.creativeIndex !== undefined) {
-        const index = parseInt(e.target.dataset.creativeIndex);
-        const field = e.target.dataset.field;
-        
-        if (field === 'isOriginal') {
-          creatives[index][field] = e.target.checked;
-          renderCreatives();
-        } else if (field === 'distribution') {
-          creatives[index][field] = parseFloat(e.target.value) || 0;
-        } else {
-          creatives[index][field] = e.target.value;
-        }
-      }
     });
 
-    document.addEventListener('input', (e) => {
-      if (e.target.dataset.type && e.target.dataset.index !== undefined) {
-        const type = e.target.dataset.type;
-        const index = parseInt(e.target.dataset.index);
-        const field = e.target.dataset.field;
-        
+    document.getElementById('conditions-wrapper').addEventListener('input', (e) => {
+      const target = e.target;
+      if (target.dataset.type && target.dataset.index !== undefined) {
+        const type = target.dataset.type;
+        const index = parseInt(target.dataset.index);
+        const field = target.dataset.field;
+
         if (field === 'value') {
-          conditions[type][index][field] = e.target.value;
-        }
-      }
-      
-      if (e.target.dataset.creativeIndex !== undefined) {
-        const index = parseInt(e.target.dataset.creativeIndex);
-        const field = e.target.dataset.field;
-        
-        if (field === 'distribution') {
-          creatives[index][field] = parseFloat(e.target.value) || 0;
-        } else if (field !== 'isOriginal') {
-          creatives[index][field] = e.target.value;
+          conditions[type][index][field] = target.value;
         }
       }
     });
 
+    // ─── Creatives ───────────────────────────────────────────────────
     function addCreative() {
       creatives.push({
         name: '',
@@ -636,7 +612,7 @@
     function renderCreatives() {
       const container = document.getElementById('creatives-list');
       container.innerHTML = '';
-      
+
       // オリジナルのCVRを取得
       let originalCvr = null;
       if (statsData && statsData.stats) {
@@ -645,7 +621,7 @@
           originalCvr = originalStat.cvr;
         }
       }
-      
+
       creatives.forEach((creative, index) => {
         let statsHtml = `
           <div class="text-sm text-gray-600">
@@ -654,11 +630,10 @@
             <div>CVR: -</div>
           </div>
         `;
-        
+
         if (statsData && statsData.stats && statsData.stats[index]) {
           const stat = statsData.stats[index];
-          
-          // 改善率を計算
+
           let improvementHtml = '';
           if (originalCvr !== null && originalCvr > 0) {
             if (creative.isOriginal) {
@@ -670,7 +645,7 @@
               improvementHtml = `<div class="${improvementColor}">改善率: ${improvementText}</div>`;
             }
           }
-          
+
           statsHtml = `
             <div class="text-sm text-gray-600">
               <div>${stat.impressions.toLocaleString()}回</div>
@@ -680,23 +655,26 @@
             </div>
           `;
         }
-        
-        const imagePreview = creative.imageUrl 
+
+        const imagePreview = creative.imageUrl
           ? `<div class="relative">
                <img src="${creative.imageUrl}" class="w-full h-32 object-cover rounded border border-gray-300">
-               <button onclick="window.removeImage(${index}); event.stopPropagation();" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">×</button>
+               <button class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                       data-action="remove-image" data-creative-index="${index}">×</button>
              </div>`
           : `<div id="image-drop-${index}" class="w-full h-32 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2">
                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                </svg>
                <div class="flex gap-2">
-                 <button onclick="window.clickUpload(${index}); event.stopPropagation();" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">アップロード</button>
-                 <button onclick="window.clickPaste(${index}); event.stopPropagation();" class="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600">貼り付け</button>
+                 <button class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                         data-action="click-upload" data-creative-index="${index}">アップロード</button>
+                 <button class="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600"
+                         data-action="click-paste" data-creative-index="${index}">貼り付け</button>
                </div>
              </div>
-             <input type="file" id="image-upload-${index}" accept="image/*" class="hidden">`;
-        
+             <input type="file" id="image-upload-${index}" accept="image/*" class="hidden" data-creative-index="${index}">`;
+
         const row = document.createElement('div');
         row.className = 'border border-gray-200 rounded-lg p-4';
         row.innerHTML = `
@@ -707,16 +685,16 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
-              <input type="text" value="${creative.name || ''}" 
-                     data-creative-index="${index}" data-field="name" 
+              <input type="text" value="${creative.name || ''}"
+                     data-creative-index="${index}" data-field="name"
                      placeholder="${creative.isOriginal ? 'オリジナル' : '名称'}"
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">配分</label>
               <div class="flex items-center gap-2">
-                <input type="number" value="${creative.distribution || 0}" 
-                       data-creative-index="${index}" data-field="distribution" 
+                <input type="number" value="${creative.distribution || 0}"
+                       data-creative-index="${index}" data-field="distribution"
                        min="0" max="100"
                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <span class="text-gray-700">%</span>
@@ -727,13 +705,15 @@
               ${statsHtml}
             </div>
             <div class="flex flex-col gap-2">
-              ${creative.isOriginal ? 
-                '<div class="text-sm text-gray-500 py-2">オリジナル</div>' : 
-                `<button class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm" onclick="openCodeModal(${index})">コードを登録</button>`
+              ${creative.isOriginal ?
+                '<div class="text-sm text-gray-500 py-2">オリジナル</div>' :
+                `<button class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+                        data-action="open-code-modal" data-creative-index="${index}">コードを登録</button>`
               }
-              <button class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm" onclick="removeCreative(${index})">削除</button>
+              <button class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+                      data-action="remove-creative" data-creative-index="${index}">削除</button>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" ${creative.isOriginal ? 'checked' : ''} 
+                <input type="checkbox" ${creative.isOriginal ? 'checked' : ''}
                        data-creative-index="${index}" data-field="isOriginal"
                        class="w-4 h-4 text-blue-600 rounded">
                 <span class="text-sm text-gray-700">オリジナルを選択</span>
@@ -742,22 +722,55 @@
           </div>
         `;
         container.appendChild(row);
-        
-        // ファイルアップロードのイベントリスナーを追加
-        const fileInput = document.getElementById(`image-upload-${index}`);
-        if (fileInput) {
-          fileInput.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (file) {
-              await window.handleImageUpload(index, file);
-              // ファイル選択をリセット（同じファイルを再度選択できるように）
-              e.target.value = '';
-            }
-          });
-        }
+      });
+
+      // Bind file-input change listeners on freshly rendered hidden inputs.
+      document.querySelectorAll('#creatives-list input[type="file"]').forEach(fileInput => {
+        fileInput.addEventListener('change', async function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const idx = parseInt(this.dataset.creativeIndex);
+            await handleImageUpload(idx, file);
+            e.target.value = ''; // reset so the same file can be selected again
+          }
+        });
       });
     }
 
+    // ─── Creative input delegation (change / input) ──────────────────
+    // Delegated on #creatives-list to cover dynamically added rows.
+    document.getElementById('creatives-list').addEventListener('change', (e) => {
+      const target = e.target;
+      if (target.dataset.creativeIndex !== undefined && target.dataset.field) {
+        const index = parseInt(target.dataset.creativeIndex);
+        const field = target.dataset.field;
+
+        if (field === 'isOriginal') {
+          creatives[index][field] = target.checked;
+          renderCreatives();
+        } else if (field === 'distribution') {
+          creatives[index][field] = parseFloat(target.value) || 0;
+        } else {
+          creatives[index][field] = target.value;
+        }
+      }
+    });
+
+    document.getElementById('creatives-list').addEventListener('input', (e) => {
+      const target = e.target;
+      if (target.dataset.creativeIndex !== undefined && target.dataset.field) {
+        const index = parseInt(target.dataset.creativeIndex);
+        const field = target.dataset.field;
+
+        if (field === 'distribution') {
+          creatives[index][field] = parseFloat(target.value) || 0;
+        } else if (field !== 'isOriginal') {
+          creatives[index][field] = target.value;
+        }
+      }
+    });
+
+    // ─── Modal ───────────────────────────────────────────────────────
     function openCodeModal(index) {
       currentCreativeIndex = index;
       const creative = creatives[index];
@@ -781,22 +794,23 @@
       closeModal();
     }
 
+    // ─── Save ────────────────────────────────────────────────────────
     async function saveABTest() {
       const testName = document.getElementById('test-name').value.trim();
       const cvCode = document.getElementById('cv-code').value.trim();
-      
+
       if (!testName) {
         alert('テスト名を入力してください');
         document.getElementById('test-name').focus();
         return;
       }
-      
+
       if (!cvCode) {
         alert('CVコードを入力してください');
         document.getElementById('cv-code').focus();
         return;
       }
-      
+
       if (creatives.length === 0) {
         alert('最低1つのクリエイティブが必要です');
         return;
@@ -806,7 +820,7 @@
       const excludeUrl = document.getElementById('exclude-url').value.trim() || '';
       const startDate = document.getElementById('start-date').value || null;
       const endDate = document.getElementById('end-date').value || null;
-      
+
       const sessionTime = document.getElementById('session-duration').value;
       const [hours, minutes] = sessionTime.split(':').map(Number);
       const sessionDuration = hours * 60 + minutes;
@@ -857,7 +871,78 @@
       location.href = `test_index.html?id=${projectId}`;
     }
 
-    // ログアウト処理
+    // ─── Top-level delegation for data-action buttons ────────────────
+    // Covers: static HTML buttons AND dynamically rendered buttons alike.
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+
+      const action = target.dataset.action;
+
+      switch (action) {
+        // --- static HTML actions ---
+        case 'toggle-condition':
+          toggleCondition(target.dataset.conditionType);
+          break;
+
+        case 'add-condition-row':
+          addConditionRow(target.dataset.conditionType);
+          break;
+
+        case 'add-creative':
+          addCreative();
+          break;
+
+        case 'save-abtest':
+          saveABTest();
+          break;
+
+        case 'close-modal':
+          closeModal();
+          break;
+
+        case 'save-code':
+          saveCode();
+          break;
+
+        // --- dynamically rendered actions (conditions) ---
+        case 'remove-condition-row':
+          removeConditionRow(target.dataset.conditionType, parseInt(target.dataset.conditionIndex));
+          break;
+
+        // --- dynamically rendered actions (creatives) ---
+        case 'open-code-modal':
+          openCodeModal(parseInt(target.dataset.creativeIndex));
+          break;
+
+        case 'remove-creative':
+          removeCreative(parseInt(target.dataset.creativeIndex));
+          break;
+
+        case 'remove-image':
+          e.stopPropagation();
+          removeImage(parseInt(target.dataset.creativeIndex));
+          break;
+
+        case 'click-upload':
+          e.stopPropagation();
+          clickUpload(parseInt(target.dataset.creativeIndex));
+          break;
+
+        case 'click-paste':
+          e.stopPropagation();
+          clickPaste(parseInt(target.dataset.creativeIndex));
+          break;
+      }
+    });
+
+    // ─── Back button ─────────────────────────────────────────────────
+    document.getElementById('back-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      goBack();
+    });
+
+    // ─── Logout ──────────────────────────────────────────────────────
     document.getElementById('logout-btn').addEventListener('click', (e) => {
       e.preventDefault();
       if (confirm('ログアウトしますか？')) {
@@ -865,9 +950,8 @@
       }
     });
 
-    // ページ初期化
+    // ─── Page init ───────────────────────────────────────────────────
     (async () => {
-      // 認証チェック
       const authenticated = await requireAuth();
       if (authenticated) {
         loadSuggestions();
