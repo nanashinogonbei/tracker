@@ -5,29 +5,17 @@ const path = require('path');
 const Project = require('../models/Project');
 const Log = require('../models/Log');
 const { toJST } = require('../utils/dateUtils');
-const { normalizeUrl, findProjectByUrl } = require('../utils/urlUtils');
+const { normalizeUrl } = require('../utils/urlUtils');
+const { isAllowedTrackingOrigin } = require('../utils/corsAndSignature');
 
 const router = express.Router();
 
-// すべてのルートに対してCORSミドルウェアを適用
-router.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  next();
-});
-
-// OPTIONSリクエストのハンドリング（プリフライト）
-router.options('*', (req, res) => {
-  res.status(204).send();
-});
-
-// SDK配信
+// ─── SDK配信  GET /tracker/:projectId.js ─────────────────────────────────────
+// オリジン検証をここで行う（プロジェクト解決後に判定が可能なため）。
 router.get('/:projectId.js', async (req, res) => {
   try {
     console.log(`[SDK] Request for project ${req.params.projectId} from origin: ${req.get('origin') || req.get('referer')}`);
-    
+
     const project = await Project.findById(req.params.projectId);
     if (!project) {
       console.error(`[SDK] Project not found: ${req.params.projectId}`);
@@ -35,19 +23,30 @@ router.get('/:projectId.js', async (req, res) => {
       return res.status(404).send('// Project not found');
     }
 
-    // 追加のヘッダー設定
+    // オリジン検証
+    const origin = req.get('Origin');
+    if (!isAllowedTrackingOrigin(origin, project)) {
+      console.warn(`[SDK] Blocked origin "${origin}" for project ${project._id}`);
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      return res.status(403).send('// Origin not allowed');
+    }
+
+    // CORS ヘッダー（credentialsなし – originをそのまま返す）
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
     const templatePath = path.join(__dirname, '..', 'public', 'tracker-sdk-template.js');
-    
+
     if (!fs.existsSync(templatePath)) {
       console.error(`[SDK] Template not found: ${templatePath}`);
       return res.status(500).send('// Template not found');
     }
-    
+
     let sdkTemplate = fs.readFileSync(templatePath, 'utf8');
     const host = req.get('host');
 
@@ -65,11 +64,13 @@ router.get('/:projectId.js', async (req, res) => {
   }
 });
 
-// トラッキング
+// ─── トラッキング  POST /track ────────────────────────────────────────────────
+// CORS・署名検証は server.js のミドルウェアチェーンで完了済み。
+// ここでは実際のログ記録のみを行う。
 router.post('/', async (req, res) => {
   try {
     let data = req.body;
-    
+
     // bodyが空でrawBodyがある場合（sendBeaconの場合）
     if ((!data || Object.keys(data).length === 0) && req.rawBody) {
       try {

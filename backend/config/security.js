@@ -55,14 +55,14 @@ function generateNonce(req, res, next) {
 function setupSecurity(app) {
   // Nonce生成
   app.use(generateNonce);
-  
+
   // Helmet - セキュリティヘッダー設定（静的HTML対応版）
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: [
-          "'self'", 
+          "'self'",
           "'unsafe-inline'",  // Tailwind CSSのため必要
           "https://unpkg.com"
         ],
@@ -86,13 +86,9 @@ function setupSecurity(app) {
     },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    // XSS Protection（古いブラウザ用）
     xssFilter: true,
-    // クリックジャッキング対策
     frameguard: { action: 'deny' },
-    // MIME Type Sniffing防止
     noSniff: true,
-    // HSTS（HTTPSの場合）
     hsts: process.env.NODE_ENV === 'production' ? {
       maxAge: 31536000,
       includeSubDomains: true,
@@ -118,23 +114,35 @@ function setupSecurity(app) {
   };
 }
 
-// CORS設定（セキュア版）
+/**
+ * CORS設定 – 管理画面・認証エンドポイント用
+ *
+ * これは認証Cookie（credentials: true）を使うルート专用です。
+ * トラッキング系エンドポイントは corsAndSignature.js のヘルパーを使い、
+ * プロジェクトごとのオリジン許可を行います。
+ *
+ * 変更点：以前は許可リストに含まれないオリジンでも `callback(null, true)` で
+ * 全て許可していたため意味がありませんでした。今回は明示的に `false` を返し
+ * 許可されていないオリジンをブロックします。
+ */
 function getCorsOptions() {
-  const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
     : ['http://localhost:3000'];
 
   return {
     origin: function (origin, callback) {
-      // トラッキングSDK配信は全てのオリジンを許可
-      // それ以外は許可リストをチェック
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        // オリジンがある場合でも、エラーではなく許可する
-        // これによりSDK配信時にエラーが発生しなくなる
-        callback(null, true);
+      // Origin ヘッダーが無い場合（同オリジン・サーバー側リクエスト）は許可
+      if (!origin) {
+        return callback(null, true);
       }
+      // 許可リストに含まれる場合のみ許可
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // それ以外は拒否（レスポンスボディは返さず CORS ヘッダーを省略）
+      console.warn(`[CORS] Blocked origin "${origin}" on admin/auth endpoint`);
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -153,9 +161,9 @@ function validateInput(schema) {
 
     if (error) {
       const errors = error.details.map(detail => detail.message);
-      return res.status(400).json({ 
-        error: '入力検証エラー', 
-        details: errors 
+      return res.status(400).json({
+        error: '入力検証エラー',
+        details: errors
       });
     }
 

@@ -1,5 +1,5 @@
-const envFile = process.env.NODE_ENV === 'production' 
-  ? '.env.production' 
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.env.production'
   : '.env.development';
 require('dotenv').config({ path: envFile });
 require('dotenv').config();
@@ -13,13 +13,20 @@ const { setupSecurity, getCorsOptions, apiLimiter, trackingLimiter } = require('
 const { authenticate, checkProjectPermission } = require('./middleware/auth');
 const { updateSuggestions } = require('./services/suggestionService');
 const { createInitialAdmin } = require('./services/initService');
+const {
+  corsOriginCallback,
+  projectLookupMiddleware,
+  isAllowedTrackingOrigin,
+  verifySignature,
+  verifyImpressionSignature
+} = require('./utils/corsAndSignature');
 
 const app = express();
 
 // 環境変数チェック
 if (!process.env.JWT_SECRET) {
   console.error('[FATAL] JWT_SECRET is not set. Application cannot start.');
-  process.exit(1); // アプリケーションを終了
+  process.exit(1);
 }
 
 // プロキシ信頼設定
@@ -34,12 +41,12 @@ setupSecurity(app);
 // Body Parser
 app.use((req, res, next) => {
   const contentType = req.headers['content-type'] || '';
-  
+
   if (contentType.includes('multipart/form-data')) {
     return next();
   }
-  
-  express.json({ 
+
+  express.json({
     limit: '10mb',
     type: ['application/json', 'text/plain', 'application/octet-stream'],
     verify: (req, res, buf, encoding) => {
@@ -50,7 +57,7 @@ app.use((req, res, next) => {
 
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ルート読み込み
+// ─── ルート読み込み ──────────────────────────────────────────────────────────
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const analyticsRoutes = require('./routes/analytics');
@@ -58,35 +65,76 @@ const abtestRoutes = require('./routes/abtests');
 const trackerRoutes = require('./routes/tracker');
 const accountRoutes = require('./routes/accounts');
 
-// トラッキング関連のエンドポイント - 完全にオープンなCORS設定
+// ─────────────────────────────────────────────────────────────────────────────
+// トラッキング関連エンドポイント
+//
+// 設計ポリシー:
+//   ① プロジェクトの allowedOrigins が設定されている場合はそちらを使う。
+//      設定されていない場合は env の ALLOWED_ORIGINS にフォールバックし、
+//      本番環境では空リスト→全拒否になる。
+//   ② SDK は全リクエストに HMAC-SHA256 署名を付与する。サーバーは
+//      verifySignature で検証する。署名の検証に失敗した場合は 401 を返す。
+//   ③ Preflight (OPTIONS) は署名不要だが、オリジン検証は行う。
+//      → projectLookupMiddleware が先に Project を解決し、その後 cors()
+//        が corsOriginCallback を用いてオリジンを評価する。
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── /tracker/:projectId.js  (SDK配信 – GET) ──────────────────────────────────
+// SDKファイル自体は公開リソースなので署名は不要だが、オリジン検証は行う。
+// trackerRoutes 内で Project が解決される。
 app.use('/tracker', cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
+  origin: function (origin, cb) {
+    // SDK配信は GET で credentials なし。オリジン検証は trackerRoutes 内で
+    // プロジェクト解決後に行うため、ここでは全オリジンを一旦許可し
+    // レスポンスヘッダーに origin をそのまま返す（credentialsなしなので安全）。
+    // 実際のトラッキング POST は /track で別途検証される。
+    cb(null, origin || true);
+  },
+  methods: ['GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
   credentials: false
 }), trackerRoutes);
 
-app.use('/track', cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  credentials: false
-}), trackingLimiter, trackerRoutes);
+// ── /track  (ページビュー・イベント記録 – POST) ─────────────────────────────
+// ① projectLookupMiddleware で Project を解決
+// ② cors で per-project オリジン検証
+// ③ verifySignature で署名検証
+// ④ trackingLimiter でレート制限
+// ⑤ trackerRoutes で実処理
+app.use('/track', projectLookupMiddleware);
+app.use('/track', (req, res, next) => {
+  cors({
+    origin: corsOriginCallback(req),
+    methods: ['POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+    credentials: false
+  })(req, res, next);
+});
+// OPTIONS (Preflight) は署名検証をスキップ
+app.options('/track', (req, res) => res.status(204).end());
+// POST は署名検証 → レート制限 → ルート処理
+app.post('/track', verifySignature, trackingLimiter, trackerRoutes);
 
-// 公開エンドポイント（認証不要）- Cookieを使うのでcredentials: true
+// ── 公開エンドポイント（認証不要） – Cookie使用のため credentials: true ──────
 const authCorsOptions = {
   ...getCorsOptions(),
   credentials: true
 };
 app.use('/api/auth', cors(authCorsOptions), authRoutes);
 
-// ABテスト実行エンドポイント（認証不要 - SDKから呼ばれる）
-app.post('/api/abtests/execute', cors({
-  origin: '*',
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  credentials: false
-}), async (req, res) => {
+// ── ABテスト実行エンドポイント（認証不要 – SDKから呼ばれる） ─────────────────
+// ① projectLookup → ② per-project CORS → ③ 署名検証 → ④ 実行
+app.use('/api/abtests/execute', projectLookupMiddleware);
+app.use('/api/abtests/execute', (req, res, next) => {
+  cors({
+    origin: corsOriginCallback(req),
+    methods: ['POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+    credentials: false
+  })(req, res, next);
+});
+app.options('/api/abtests/execute', (req, res) => res.status(204).end());
+app.post('/api/abtests/execute', verifySignature, async (req, res) => {
   const ABTest = require('./models/ABTest');
   const useragent = require('useragent');
   const { checkConditions, selectCreative } = require('./utils/conditionUtils');
@@ -130,29 +178,19 @@ app.post('/api/abtests/execute', cors({
     };
 
     for (const abtest of abtests) {
-      if (abtest.startDate && now < new Date(abtest.startDate)) {
-        continue;
-      }
-      if (abtest.endDate && now > new Date(abtest.endDate)) {
-        continue;
-      }
+      if (abtest.startDate && now < new Date(abtest.startDate)) continue;
+      if (abtest.endDate && now > new Date(abtest.endDate)) continue;
 
       if (abtest.targetUrl && abtest.targetUrl.trim() !== '') {
-        if (!matchUrl(url, abtest.targetUrl)) {
-          continue;
-        }
+        if (!matchUrl(url, abtest.targetUrl)) continue;
       }
 
       if (abtest.excludeUrl && abtest.excludeUrl.trim() !== '') {
-        if (matchUrl(url, abtest.excludeUrl)) {
-          continue;
-        }
+        if (matchUrl(url, abtest.excludeUrl)) continue;
       }
 
       const conditionsMatch = checkConditions(abtest.conditions, userContext);
-      if (!conditionsMatch) {
-        continue;
-      }
+      if (!conditionsMatch) continue;
 
       const result = selectCreative(abtest.creatives);
       if (result) {
@@ -179,13 +217,18 @@ app.post('/api/abtests/execute', cors({
   }
 });
 
-// ABテストインプレッションログ（認証不要 - SDKから呼ばれる）
-app.post('/api/abtests/log-impression', cors({
-  origin: '*',
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  credentials: false
-}), trackingLimiter, async (req, res) => {
+// ── ABテストインプレッションログ（認証不要 – SDKから呼ばれる） ────────────────
+app.use('/api/abtests/log-impression', projectLookupMiddleware);
+app.use('/api/abtests/log-impression', (req, res, next) => {
+  cors({
+    origin: corsOriginCallback(req),
+    methods: ['POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+    credentials: false
+  })(req, res, next);
+});
+app.options('/api/abtests/log-impression', (req, res) => res.status(204).end());
+app.post('/api/abtests/log-impression', verifyImpressionSignature, trackingLimiter, async (req, res) => {
   const Project = require('./models/Project');
   const ABTestLog = require('./models/ABTestLog');
   const useragent = require('useragent');
@@ -244,29 +287,54 @@ app.post('/api/abtests/log-impression', cors({
   }
 });
 
-// 特定のクリエイティブ取得（認証不要 - SDKから呼ばれる）
-app.get('/api/abtests/:abtestId/creative/:creativeIndex', cors({
-  origin: '*',
-  methods: ['GET', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  credentials: false
-}), async (req, res) => {
+// ── 特定クリエイティブ取得（認証不要 – SDKから呼ばれる） ─────────────────────
+// GET なので署名は不要だがオリジン検証は行う。
+// Project は ABTest から逆引きで取得する。
+app.get('/api/abtests/:abtestId/creative/:creativeIndex', async (req, res, next) => {
+  // ABTest → Project の逆引きでオリジン検証に使う Project を解決
+  try {
+    const ABTest = require('./models/ABTest');
+    const Project = require('./models/Project');
+    const abtest = await ABTest.findById(req.params.abtestId);
+    if (abtest) {
+      const project = await Project.findById(abtest.projectId);
+      if (project) {
+        req.resolvedProject = project;
+      }
+    }
+  } catch (_) { /* fallthrough */ }
+
+  // オリジン検証
+  const origin = req.get('Origin');
+  if (!isAllowedTrackingOrigin(origin, req.resolvedProject)) {
+    console.warn(`[CORS] Blocked origin "${origin}" on creative endpoint`);
+    res.removeHeader('Access-Control-Allow-Origin');
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+
+  // CORS レスポンスヘッダーを手動設定（credentialsなし）
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  next();
+}, async (req, res) => {
   const ABTest = require('./models/ABTest');
-  
+
   try {
     const abtest = await ABTest.findById(req.params.abtestId);
-    
+
     if (!abtest) {
       return res.status(404).json({ error: 'ABTest not found' });
     }
-    
+
     const creativeIndex = parseInt(req.params.creativeIndex);
     if (creativeIndex < 0 || creativeIndex >= abtest.creatives.length) {
       return res.status(404).json({ error: 'Creative not found' });
     }
-    
+
     const creative = abtest.creatives[creativeIndex];
-    
+
     res.json({
       abtestId: abtest._id,
       abtestName: abtest.name,
@@ -284,11 +352,15 @@ app.get('/api/abtests/:abtestId/creative/:creativeIndex', cors({
     res.status(500).json({ error: err.message });
   }
 });
+// OPTIONS for the creative endpoint
+app.options('/api/abtests/:abtestId/creative/:creativeIndex', (req, res) => {
+  res.status(204).end();
+});
 
-// 静的ファイル（認証不要）
+// ── 静的ファイル（認証不要） ──────────────────────────────────────────────────
 app.use(express.static('public'));
 
-// 保護されたAPIエンドポイント（認証必要）- credentials: true
+// ── 保護されたAPIエンドポイント（認証必要） – credentials: true ─────────────
 const protectedCorsOptions = {
   ...getCorsOptions(),
   credentials: true
@@ -298,22 +370,22 @@ app.use('/api/analytics', cors(protectedCorsOptions), apiLimiter, authenticate, 
 app.use('/api/abtests', cors(protectedCorsOptions), apiLimiter, authenticate, abtestRoutes);
 app.use('/api/accounts', cors(protectedCorsOptions), apiLimiter, authenticate, accountRoutes);
 
-// エラーハンドリングミドルウェア
+// ── エラーハンドリングミドルウェア ──────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('[Error]', err);
-  
+
   if (err.name === 'ValidationError') {
     return res.status(400).json({ error: '入力検証エラー', details: err.message });
   }
-  
+
   if (err.name === 'UnauthorizedError') {
     return res.status(401).json({ error: '認証が必要です' });
   }
-  
+
   if (err.message === 'CORS policy violation') {
     return res.status(403).json({ error: 'アクセスが拒否されました' });
   }
-  
+
   res.status(500).json({ error: 'サーバーエラーが発生しました' });
 });
 
