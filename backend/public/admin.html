@@ -47,6 +47,7 @@
 							<div class="flex gap-4">
 								<a href="test_index.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">ABテスト</a>
 								<a href="analytics.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">アクセス解析</a>
+								<a href="project_detail.html?id=${project._id}" class="text-blue-500 text-sm hover:underline">編集</a>
 								<a href="#" data-project-id="${project._id}" class="delete-link text-red-500 text-sm hover:underline">削除</a>
 							</div>
 						</div>
@@ -69,7 +70,7 @@
 			} catch (err) {
 				console.error('Failed to load projects:', err);
 				if (err.message === 'Authentication required' || err.message === 'Session expired') {
-					return; // authFetchが既にリダイレクト処理済み
+					return;
 				}
 				alert('プロジェクトの読み込みに失敗しました');
 			}
