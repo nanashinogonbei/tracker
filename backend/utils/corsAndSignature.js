@@ -33,13 +33,31 @@ const Project = require('../models/Project');
  * @param {object|null}      project – Mongoose Project document (or null)
  * @returns {boolean}
  */
+/**
+ * Origin を正規化する。末尾スラッシュを除去・小文字化する。
+ * Origin ヘッダー自体はスラッシュを含まないことが仕様だが、
+ * allowedOrigins に誤りで入った場合にも対応する。
+ */
+function normalizeOrigin(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  return raw.trim().replace(/\/+$/, '').toLowerCase();
+}
+
 function isAllowedTrackingOrigin(origin, project) {
   if (!origin) return true; // same-origin / server-side
 
+  const normalizedOrigin = normalizeOrigin(origin);
+
   // Project-level allowlist
   if (project && Array.isArray(project.allowedOrigins) && project.allowedOrigins.length > 0) {
-    return project.allowedOrigins.some(allowed => {
-      if (origin === allowed) return true;
+    console.log(`[CORS] Checking origin "${origin}" (normalized: "${normalizedOrigin}") against project ${project._id} allowedOrigins:`, JSON.stringify(project.allowedOrigins));
+
+    const matched = project.allowedOrigins.some(allowed => {
+      const normalizedAllowed = normalizeOrigin(allowed);
+
+      // 完全一致（正規化済み）
+      if (normalizedOrigin === normalizedAllowed) return true;
+
       // Wildcard sub-domain: "https://*.example.com"
       if (allowed.startsWith('https://*.') || allowed.startsWith('http://*.')) {
         const baseDomain = allowed.replace(/^https?:\/\/\*/, ''); // ".example.com"
@@ -52,7 +70,15 @@ function isAllowedTrackingOrigin(origin, project) {
       }
       return false;
     });
+
+    if (!matched) {
+      console.warn(`[CORS] Origin "${origin}" did not match any entry in allowedOrigins for project ${project._id}`);
+    }
+    return matched;
   }
+
+  // allowedOrigins が空の場合はログに明示する
+  console.warn(`[CORS] Project ${project?._id || 'unknown'} has empty allowedOrigins. Falling back to global ALLOWED_ORIGINS env.`);
 
   // Global fallback
   const globalOrigins = process.env.ALLOWED_ORIGINS
@@ -60,6 +86,7 @@ function isAllowedTrackingOrigin(origin, project) {
     : [];
 
   if (globalOrigins.length === 0) {
+    console.warn(`[CORS] Global ALLOWED_ORIGINS is also empty. NODE_ENV=${process.env.NODE_ENV}. ${process.env.NODE_ENV === 'production' ? 'BLOCKING.' : 'Allowing (dev).'}`);
     return process.env.NODE_ENV !== 'production';
   }
 

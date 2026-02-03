@@ -37,12 +37,12 @@
 		const cryptoKey = await crypto.subtle.importKey(
 			'raw',
 			enc.encode(key),
-			{ name: 'HMAC' },
+			{ name: 'HMAC', hash: { name: 'SHA-256' } },
 			false,
 			['sign']
 		);
 		const signature = await crypto.subtle.sign(
-			'HMAC',
+			{ name: 'HMAC', hash: { name: 'SHA-256' } },
 			cryptoKey,
 			enc.encode(message)
 		);

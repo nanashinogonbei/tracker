@@ -220,6 +220,8 @@
       }
 
       try {
+        console.log('[ProjectDetail] Sending allowedOrigins:', JSON.stringify(filteredOrigins));
+
         const res = await authFetch(`${API_URL}/projects/${projectId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -227,10 +229,13 @@
         });
 
         if (res.ok) {
+          const updated = await res.json();
+          console.log('[ProjectDetail] Save response (updated project):', JSON.stringify(updated.allowedOrigins));
           alert('保存しました');
           location.href = 'admin.html';
         } else {
           const error = await res.json();
+          console.error('[ProjectDetail] Save failed:', error);
           alert('保存に失敗しました: ' + (error.error || '不明なエラー'));
         }
       } catch (err) {

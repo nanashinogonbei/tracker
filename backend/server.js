@@ -29,8 +29,21 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// プロキシ信頼設定
-app.set('trust proxy', true);
+// プロキシ信頼設定（1ホップ: Dockerのnginxなど直前のプロキシのみ）
+app.set('trust proxy', 1);
+
+// ── SDK系エンドポイント用 OPTIONS グローバルハンドラー ────────────────────────
+// Preflight (OPTIONS) は body が無い → projectId 解決不可 → 署名検証も不要。
+// これらエンドポイントの OPTIONS は早期レスポンスで処理する。
+// 実際のオリジン検証・署名検証は POST で行う。
+const SDK_PREFLIGHT_PATHS = ['/track', '/api/abtests/execute', '/api/abtests/log-impression'];
+app.options(SDK_PREFLIGHT_PATHS, (req, res) => {
+  const origin = req.get('Origin');
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(204).end();
+});
 
 // Cookie Parser（セキュリティミドルウェアより前に配置）
 app.use(cookieParser());
@@ -96,11 +109,16 @@ app.use('/tracker', cors({
 }), trackerRoutes);
 
 // ── /track  (ページビュー・イベント記録 – POST) ─────────────────────────────
-// ① projectLookupMiddleware で Project を解決
-// ② cors で per-project オリジン検証
-// ③ verifySignature で署名検証
-// ④ trackingLimiter でレート制限
-// ⑤ trackerRoutes で実処理
+// OPTIONS (Preflight) は body が無い → projectId 解決不可 →
+// Origin をそのまま返す（credentials: false なので安全）。実際の検証は POST で行う。
+app.options('/track', (req, res) => {
+  const origin = req.get('Origin');
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(204).end();
+});
+// POST: ① projectLookup → ② per-project CORS → ③ 署名検証 → ④ レート制限 → ⑤ 実処理
 app.use('/track', projectLookupMiddleware);
 app.use('/track', (req, res, next) => {
   cors({
@@ -110,10 +128,12 @@ app.use('/track', (req, res, next) => {
     credentials: false
   })(req, res, next);
 });
-// OPTIONS (Preflight) は署名検証をスキップ
-app.options('/track', (req, res) => res.status(204).end());
-// POST は署名検証 → レート制限 → ルート処理
-app.post('/track', verifySignature, trackingLimiter, trackerRoutes);
+app.post('/track', verifySignature, trackingLimiter, (req, res, next) => {
+  // trackerRoutes の router.post('/') に正しくマッチさせるため、
+  // マウント済みパスを一時的にリセットして router に渡す
+  req.url = '/';
+  trackerRoutes(req, res, next);
+});
 
 // ── 公開エンドポイント（認証不要） – Cookie使用のため credentials: true ──────
 const authCorsOptions = {
@@ -123,7 +143,15 @@ const authCorsOptions = {
 app.use('/api/auth', cors(authCorsOptions), authRoutes);
 
 // ── ABテスト実行エンドポイント（認証不要 – SDKから呼ばれる） ─────────────────
-// ① projectLookup → ② per-project CORS → ③ 署名検証 → ④ 実行
+// OPTIONS は body 無し → projectId 解決不可 → Origin をそのまま返す。
+app.options('/api/abtests/execute', (req, res) => {
+  const origin = req.get('Origin');
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(204).end();
+});
+// POST: ① projectLookup → ② per-project CORS → ③ 署名検証 → ④ 実行
 app.use('/api/abtests/execute', projectLookupMiddleware);
 app.use('/api/abtests/execute', (req, res, next) => {
   cors({
@@ -133,7 +161,6 @@ app.use('/api/abtests/execute', (req, res, next) => {
     credentials: false
   })(req, res, next);
 });
-app.options('/api/abtests/execute', (req, res) => res.status(204).end());
 app.post('/api/abtests/execute', verifySignature, async (req, res) => {
   const ABTest = require('./models/ABTest');
   const useragent = require('useragent');
@@ -218,6 +245,15 @@ app.post('/api/abtests/execute', verifySignature, async (req, res) => {
 });
 
 // ── ABテストインプレッションログ（認証不要 – SDKから呼ばれる） ────────────────
+// OPTIONS は body 無し → projectId 解決不可 → Origin をそのまま返す。
+app.options('/api/abtests/log-impression', (req, res) => {
+  const origin = req.get('Origin');
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(204).end();
+});
+// POST: ① projectLookup → ② per-project CORS → ③ 署名検証 → ④ レート制限 → ⑤ 実処理
 app.use('/api/abtests/log-impression', projectLookupMiddleware);
 app.use('/api/abtests/log-impression', (req, res, next) => {
   cors({
@@ -227,7 +263,6 @@ app.use('/api/abtests/log-impression', (req, res, next) => {
     credentials: false
   })(req, res, next);
 });
-app.options('/api/abtests/log-impression', (req, res) => res.status(204).end());
 app.post('/api/abtests/log-impression', verifyImpressionSignature, trackingLimiter, async (req, res) => {
   const Project = require('./models/Project');
   const ABTestLog = require('./models/ABTestLog');
@@ -307,7 +342,6 @@ app.get('/api/abtests/:abtestId/creative/:creativeIndex', async (req, res, next)
   // オリジン検証
   const origin = req.get('Origin');
   if (!isAllowedTrackingOrigin(origin, req.resolvedProject)) {
-    console.warn(`[CORS] Blocked origin "${origin}" on creative endpoint`);
     res.removeHeader('Access-Control-Allow-Origin');
     return res.status(403).json({ error: 'Origin not allowed' });
   }

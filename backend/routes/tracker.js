@@ -14,7 +14,8 @@ const router = express.Router();
 // オリジン検証をここで行う（プロジェクト解決後に判定が可能なため）。
 router.get('/:projectId.js', async (req, res) => {
   try {
-    console.log(`[SDK] Request for project ${req.params.projectId} from origin: ${req.get('origin') || req.get('referer')}`);
+    const origin = req.get('Origin');
+    console.log(`[SDK] Request for project ${req.params.projectId} | Origin: "${origin}" | Referer: "${req.get('referer')}"`);
 
     const project = await Project.findById(req.params.projectId);
     if (!project) {
@@ -23,8 +24,9 @@ router.get('/:projectId.js', async (req, res) => {
       return res.status(404).send('// Project not found');
     }
 
+    console.log(`[SDK] Project ${project._id} allowedOrigins from DB:`, JSON.stringify(project.allowedOrigins));
+
     // オリジン検証
-    const origin = req.get('Origin');
     if (!isAllowedTrackingOrigin(origin, project)) {
       console.warn(`[SDK] Blocked origin "${origin}" for project ${project._id}`);
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
